@@ -5,6 +5,6 @@
   "configPath": ["search_explorer"],
   "server": false,
   "ui": true,
-  "requiredPlugins": ["data", "demoSearch"],
+  "requiredPlugins": ["data", "demoSearch", "enhancedData"],
   "optionalPlugins": []
 }

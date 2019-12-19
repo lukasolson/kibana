@@ -22,6 +22,7 @@ import { EuiButton, EuiCodeBlock, EuiFlexItem, EuiFlexGroup, EuiText } from '@el
 import { EuiProgress } from '@elastic/eui';
 import { Observable } from 'rxjs';
 import { IKibanaSearchResponse, IKibanaSearchRequest } from '../../../src/plugins/data/public';
+import { getSendToBackground } from './plugin';
 
 interface Props {
   request: IKibanaSearchRequest;
@@ -79,6 +80,10 @@ export class DoSearch extends React.Component<Props, State> {
     }
   };
 
+  sendToBackground = () => {
+    getSendToBackground()();
+  };
+
   render() {
     let responseStr = this.state.error
       ? JSON.stringify(this.state.error, null, 2)
@@ -97,6 +102,9 @@ export class DoSearch extends React.Component<Props, State> {
             <EuiButton disabled={!this.state.searching} onClick={this.cancel}>
               Cancel
             </EuiButton>
+          </EuiFlexItem>
+          <EuiFlexItem grow={false}>
+            <EuiButton onClick={this.sendToBackground}>Send to background</EuiButton>
           </EuiFlexItem>
         </EuiFlexGroup>
         <EuiFlexGroup>

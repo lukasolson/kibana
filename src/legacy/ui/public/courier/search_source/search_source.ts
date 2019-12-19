@@ -70,16 +70,15 @@
  */
 
 import _ from 'lodash';
-import { npSetup } from 'ui/new_platform';
+import { npSetup, npStart } from 'ui/new_platform';
+import { map, mergeMap } from 'rxjs/operators';
+import { from } from 'rxjs';
 import { normalizeSortRequest } from './normalize_sort_request';
-import { fetchSoon } from '../fetch';
 import { fieldWildcardFilter } from '../../field_wildcard';
 import { getHighlightRequest, esFilters, esQuery } from '../../../../../plugins/data/public';
-import chrome from '../../chrome';
-import { RequestFailure } from '../fetch/errors';
 import { filterDocvalueFields } from './filter_docvalue_fields';
 import { SearchSourceOptions, SearchSourceFields, SearchRequest } from './types';
-import { FetchOptions, ApiCaller } from '../fetch/types';
+import { FetchOptions } from '../fetch/types';
 
 const esShardTimeout = npSetup.core.injectedMetadata.getInjectedVar('esShardTimeout') as number;
 const config = npSetup.core.uiSettings;
@@ -191,29 +190,21 @@ export class SearchSource {
    *
    * @async
    */
-  async fetch(options: FetchOptions = {}) {
-    const $injector = await chrome.dangerouslyGetActiveInjector();
-    const es = $injector.get('es') as ApiCaller;
 
-    await this.requestIsStarting(options);
-
-    const searchRequest = await this.flatten();
-    this.history = [searchRequest];
-
-    const response = await fetchSoon(
-      searchRequest,
-      {
-        ...(this.searchStrategyId && { searchStrategyId: this.searchStrategyId }),
-        ...options,
-      },
-      { es, config, esShardTimeout }
+  fetch(options: FetchOptions = {}) {
+    return from(this.requestIsStarting(options)).pipe(
+      mergeMap(() => {
+        const searchRequest = this.flatten();
+        this.history = [searchRequest];
+        const params = {
+          index: searchRequest.index.title || searchRequest.index,
+          body: searchRequest.body,
+        };
+        return npStart.plugins.data.search
+          .search({ params }, { signal: options.abortSignal })
+          .pipe(map(response => response.rawResponse));
+      })
     );
-
-    if (response.error) {
-      throw new RequestFailure(null, response);
-    }
-
-    return response;
   }
 
   /**

@@ -286,19 +286,26 @@ export class SearchEmbeddable extends Embeddable<SearchInput, SearchOutput>
 
     try {
       // Make the request
-      const resp = await searchSource.fetch({
-        abortSignal: this.abortController.signal,
-      });
-      this.searchScope.isLoading = false;
+      searchSource
+        .fetch({
+          abortSignal: this.abortController.signal,
+        })
+        .subscribe(
+          resp => {
+            // Log response to inspector
+            inspectorRequest
+              .stats(getResponseInspectorStats(searchSource, resp))
+              .ok({ json: resp });
 
-      // Log response to inspector
-      inspectorRequest.stats(getResponseInspectorStats(searchSource, resp)).ok({ json: resp });
-
-      // Apply the changes to the angular scope
-      this.searchScope.$apply(() => {
-        this.searchScope!.hits = resp.hits.hits;
-        this.searchScope!.totalHitCount = resp.hits.total;
-      });
+            // Apply the changes to the angular scope
+            this.searchScope.$apply(() => {
+              this.searchScope!.hits = resp.hits.hits;
+              this.searchScope!.totalHitCount = resp.hits.total;
+            });
+          },
+          () => {},
+          () => (this.searchScope.isLoading = false)
+        );
     } catch (error) {
       // If the fetch was aborted, no need to surface this in the UI
       if (error.name === 'AbortError') return;

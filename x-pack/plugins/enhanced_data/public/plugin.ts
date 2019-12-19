@@ -14,6 +14,10 @@ interface SetupDependencies {
   data: DataPublicPluginSetup;
 }
 
+export const requestCollector = new Map<string, string>();
+
+export type EnhancedDataPublicPluginSetup = ReturnType<EnhancedDataPublicPlugin['setup']>;
+
 export class EnhancedDataPublicPlugin implements Plugin<void, void, SetupDependencies> {
   constructor(private initializerContext: PluginInitializerContext) {}
 
@@ -28,6 +32,16 @@ export class EnhancedDataPublicPlugin implements Plugin<void, void, SetupDepende
       ES_SEARCH_STRATEGY,
       enhancedEsSearchStrategyProvider
     );
+
+    return {
+      search: {
+        sendToBackground: id => {
+          console.log(requestCollector);
+          // Do something fancy!
+          requestCollector.clear();
+        },
+      },
+    };
   }
 
   public start() {}
