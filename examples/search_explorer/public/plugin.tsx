@@ -18,7 +18,7 @@
  */
 
 import { Plugin, CoreSetup } from 'kibana/public';
-import { DataPublicPluginSetup, ISearchAppMountContext } from '../../../src/plugins/data/public';
+import { ISearchAppMountContext } from '../../../src/plugins/data/public';
 import { EnhancedDataPublicPluginSetup } from '../../../x-pack/plugins/enhanced_data/public/plugin';
 
 declare module 'kibana/public' {
@@ -41,14 +41,8 @@ export class SearchExplorerPlugin implements Plugin {
         return renderApp(context, params);
       },
     });
-    sendToBackground = deps.enhancedData.search.sendToBackground;
   }
 
   public start() {}
   public stop() {}
-}
-
-let sendToBackground: () => void;
-export function getSendToBackground() {
-  return sendToBackground;
 }
