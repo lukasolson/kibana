@@ -76,6 +76,7 @@ import { getRootBreadcrumbs, getSavedSearchBreadcrumbs } from '../helpers/breadc
 import { generateFilters } from '../../../../../../../plugins/data/public';
 import { getIndexPatternId } from '../helpers/get_index_pattern_id';
 import { FilterStateManager } from '../../../../../data/public';
+import { npStart } from '../../../visualize/legacy_imports';
 
 const { getSavedQuery } = data.query.savedQueries;
 
@@ -436,6 +437,14 @@ function discoverController(
 
   const $state = ($scope.state = new AppState(getStateDefaults()));
 
+  const searchCollector = npStart.plugins.data.search.getSearchCollector($state.searchCollectorId);
+
+  $scope.sendToBackground = () => {
+    $state.searchCollectorId = searchCollector.getId();
+    $state.save();
+    searchCollector.sendToBackground();
+  };
+
   $scope.filters = filterManager.getFilters();
   $scope.screenTitle = savedSearch.title;
 
@@ -795,13 +804,18 @@ function discoverController(
     $scope
       .updateDataSource()
       .then(setupVisualization)
+      .then(() => searchCollector.whenInitialized())
       .then(function() {
         $state.save();
         $scope.fetchStatus = fetchStatuses.LOADING;
         logInspectorRequest();
-        return $scope.searchSource.fetch({
-          abortSignal: abortController.signal,
-        });
+
+        return $scope.searchSource
+          .fetch({
+            abortSignal: abortController.signal,
+            searchCollector,
+          })
+          .toPromise();
       })
       .then(onResults)
       .catch(error => {

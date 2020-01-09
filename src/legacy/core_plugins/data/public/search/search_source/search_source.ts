@@ -72,13 +72,14 @@
 import _ from 'lodash';
 import { npSetup, npStart } from 'ui/new_platform';
 import { from } from 'rxjs';
-import { map, mergeMap } from 'rxjs/operators';
+import { first, map, mergeMap } from 'rxjs/operators';
 import { normalizeSortRequest } from './normalize_sort_request';
 import { fieldWildcardFilter } from '../../../../../../plugins/kibana_utils/public';
 import { getHighlightRequest, esFilters, esQuery } from '../../../../../../plugins/data/public';
 import { filterDocvalueFields } from './filter_docvalue_fields';
 import { SearchSourceOptions, SearchSourceFields, SearchRequest } from './types';
 import { FetchOptions } from '../fetch/types';
+import { calculateObjectHash } from '../../../../visualizations/public/np_ready/public';
 
 const config = npSetup.core.uiSettings;
 
@@ -186,21 +187,39 @@ export class SearchSource {
 
   /**
    * Fetch this source and reject the returned Promise on error
-   *
-   * @async
    */
-  async fetch(options: FetchOptions = {}) {
+  fetch(options: FetchOptions = {}) {
     return from(this.requestIsStarting(options)).pipe(
       mergeMap(() => {
         const searchRequest = this.flatten();
+        searchRequest.rest_total_hits_as_int = true;
+        searchRequest.body.aggs = {
+          ...searchRequest.body.aggs,
+          delay: {
+            delay: {
+              index: '*',
+              value: '5s',
+            },
+          },
+        };
         this.history = [searchRequest];
         const params = {
           index: searchRequest.index.title || searchRequest.index,
           body: searchRequest.body,
         };
-        return npStart.plugins.data.search
-          .search({ params }, { signal: options.abortSignal })
-          .pipe(map(response => response.rawResponse));
+        const { abortSignal: signal } = options;
+        const requestKey = calculateObjectHash({ params });
+
+        const id = options?.searchCollector?.getRequestFromKey(requestKey);
+        if (id) {
+          return npStart.plugins.data.search
+            .search({ id, params: {} }, { signal })
+            .pipe(map(response => response.rawResponse));
+        } else {
+          const response$ = npStart.plugins.data.search.search({ params }, { signal });
+          options?.searchCollector?.addRequest(requestKey, response$.pipe(first()).toPromise());
+          return response$.pipe(map(response => response.rawResponse));
+        }
       })
     );
   }

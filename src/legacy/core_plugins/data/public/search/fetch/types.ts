@@ -19,6 +19,7 @@
 
 import { IUiSettingsClient } from '../../../../../../core/public';
 import { SearchRequest, SearchResponse } from '../types';
+import { SearchCollector } from '../../../../../../plugins/data/public/search/search_collector';
 
 export interface ApiCaller {
   search: (searchRequest: SearchRequest) => ApiCallerResponse;
@@ -32,6 +33,7 @@ export interface ApiCallerResponse extends Promise<SearchResponse> {
 export interface FetchOptions {
   abortSignal?: AbortSignal;
   searchStrategyId?: string;
+  searchCollector?: SearchCollector;
 }
 
 export interface FetchHandlers {

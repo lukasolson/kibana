@@ -18,6 +18,14 @@
  */
 
 export const mappings = {
+  searchCollector: {
+    properties: {
+      requestMap: {
+        dynamic: 'true',
+        type: 'object',
+      },
+    },
+  },
   query: {
     properties: {
       title: {

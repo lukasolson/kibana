@@ -37,6 +37,7 @@ import {
 import { TStrategyTypes } from './strategy_types';
 import { esSearchService } from './es_search';
 import { ISearchGeneric } from './i_search';
+import { SearchCollector } from './search_collector';
 
 /**
  * Extends the AppMountContext so other plugins have access
@@ -50,6 +51,7 @@ declare module 'kibana/public' {
 
 export interface ISearchStart {
   search: ISearchGeneric;
+  getSearchCollector: (id?: string) => SearchCollector;
 }
 
 /**
@@ -119,7 +121,16 @@ export class SearchService implements Plugin<ISearchSetup, ISearchStart> {
     if (!this.search) {
       throw new Error('Search should always be defined');
     }
-    return { search: this.search };
+    const searchCollectorMap: Map<string, SearchCollector> = new Map();
+    return {
+      search: this.search,
+      getSearchCollector: (id?: string) => {
+        if (searchCollectorMap.has(id)) return searchCollectorMap.get(id);
+        const searchCollector = new SearchCollector(core.savedObjects.client, id);
+        searchCollectorMap.set(searchCollector.getId(), searchCollector);
+        return searchCollector;
+      },
+    };
   }
 
   public stop() {}

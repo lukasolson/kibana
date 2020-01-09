@@ -30,9 +30,11 @@ import {
   IEsSearchRequest,
   IEsSearchResponse,
 } from '../../common/search/es_search';
+import { SearchCollector } from './search_collector';
 
 export interface ISearchOptions {
   signal?: AbortSignal;
+  searchCollector?: SearchCollector;
 }
 
 export interface IRequestTypesMap {

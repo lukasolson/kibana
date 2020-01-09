@@ -156,7 +156,7 @@ const handleCourierRequest = async ({
     request.stats(getRequestInspectorStats(requestSearchSource));
 
     try {
-      const response = await requestSearchSource.fetch({ abortSignal });
+      const response = await requestSearchSource.fetch({ abortSignal }).toPromise();
 
       (searchSource as any).lastQuery = queryHash;
 
