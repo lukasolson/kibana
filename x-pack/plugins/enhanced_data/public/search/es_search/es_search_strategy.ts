@@ -5,7 +5,6 @@
  */
 
 import { Observable } from 'rxjs';
-import { first } from 'rxjs/operators';
 import { ES_SEARCH_STRATEGY, IEsSearchResponse } from '../../../../../../src/plugins/data/common';
 import { ASYNC_SEARCH_STRATEGY } from '../async_search_strategy';
 import {
@@ -14,7 +13,6 @@ import {
   ISearchGeneric,
   ISearchContext,
 } from '../../../../../../src/plugins/data/public';
-import { requestCollector } from '../../plugin';
 
 export const enhancedEsSearchStrategyProvider: TSearchStrategyProvider<typeof ES_SEARCH_STRATEGY> = (
   context: ISearchContext,
@@ -22,17 +20,11 @@ export const enhancedEsSearchStrategyProvider: TSearchStrategyProvider<typeof ES
 ): ISearchStrategy<typeof ES_SEARCH_STRATEGY> => {
   return {
     search: (request, options) => {
-      const response$ = search(
+      return search(
         { ...request, serverStrategy: ES_SEARCH_STRATEGY },
         options,
         ASYNC_SEARCH_STRATEGY
       ) as Observable<IEsSearchResponse>;
-
-      response$.pipe(first()).subscribe(({ id }) => {
-        requestCollector.set(JSON.stringify(request), id);
-      });
-
-      return response$;
     },
   };
 };
