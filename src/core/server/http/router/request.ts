@@ -20,6 +20,7 @@
 import { Url } from 'url';
 import { Request } from 'hapi';
 
+import { Observable, Subject } from 'rxjs';
 import { deepFreeze, RecursiveReadonly } from '../../../utils';
 import { Headers } from './headers';
 import { RouteMethod, RouteConfigOptions, validBodyOutput } from './route';
@@ -117,6 +118,10 @@ export class KibanaRequest<
 
   public readonly socket: IKibanaSocket;
 
+  public readonly events: {
+    abort$: Observable<void>;
+  };
+
   /** @internal */
   protected readonly [requestSymbol]: Request;
 
@@ -140,6 +145,13 @@ export class KibanaRequest<
 
     this.route = deepFreeze(this.getRouteInfo());
     this.socket = new KibanaSocket(request.raw.req.socket);
+
+    const abort$ = new Subject<void>();
+    request.raw.req.once('abort', () => abort$.next());
+
+    this.events = {
+      abort$: abort$.asObservable(),
+    };
   }
 
   private getRouteInfo(): KibanaRequestRoute<Method> {

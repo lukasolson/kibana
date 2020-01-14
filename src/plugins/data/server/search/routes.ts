@@ -34,9 +34,15 @@ export function registerSearchRoute(router: IRouter): void {
     },
     async (context, request, res) => {
       const searchRequest = request.body;
+      const abortController = new AbortController();
+      request.events.abort$.subscribe(() => {
+        console.log('aborting request!!');
+        abortController.abort();
+      });
+      const options = { signal: abortController.signal };
       const strategy = request.params.strategy;
       try {
-        const response = await context.search!.search(searchRequest, {}, strategy);
+        const response = await context.search!.search(searchRequest, options, strategy);
         return res.ok({ body: response });
       } catch (err) {
         return res.internalError({ body: err });
