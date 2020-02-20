@@ -17,15 +17,9 @@
  * under the License.
  */
 
-import { CoreStart } from 'kibana/public';
 import { ISearch, ISearchGeneric } from './i_search';
 import { TStrategyTypes } from './strategy_types';
 import { LegacyApiCaller } from './es_client';
-
-export interface ISearchContext {
-  core: CoreStart;
-  getSearchStrategy: <T extends TStrategyTypes>(name: T) => TSearchStrategyProvider<T>;
-}
 
 /**
  * Search strategy interface contains a search method that takes in
@@ -36,37 +30,6 @@ export interface ISearchStrategy<T extends TStrategyTypes> {
 }
 
 /**
- * Search strategy provider creates an instance of a search strategy with the request
- * handler context bound to it. This way every search strategy can use
- * whatever information they require from the request context.
- */
-export type TSearchStrategyProviderEnhanced<T extends TStrategyTypes> = (
-  search: ISearchGeneric
-) => Promise<ISearchStrategy<T>>;
-
-export type TSearchStrategiesMap = {
-  [K in TStrategyTypes]?: TSearchStrategyProvider<any>;
-};
-
-/**
- * Search strategy provider creates an instance of a search strategy with the request
- * handler context bound to it. This way every search strategy can use
- * whatever information they require from the request context.
- */
-export type TSearchStrategyProvider<T extends TStrategyTypes> = (
-  context: ISearchContext
-) => ISearchStrategy<T>;
-
-/**
- * Extension point exposed for other plugins to register their own search
- * strategies.
- */
-export type TRegisterSearchStrategyProvider = <T extends TStrategyTypes>(
-  name: T,
-  searchStrategyProvider: TSearchStrategyProvider<T>
-) => void;
-
-/**
  * The setup contract exposed by the Search plugin exposes the search strategy extension
  * point.
  */
@@ -75,11 +38,15 @@ export interface ISearchSetup {
    * Extension point exposed for other plugins to register their own search
    * strategies.
    */
-  registerSearchStrategyProvider: TRegisterSearchStrategyProvider;
+  registerSearchStrategy: <T extends TStrategyTypes>(
+    name: T,
+    searchStrategy: Promise<ISearchStrategy<T>>
+  ) => void;
 }
 
 export interface ISearchStart {
   search: ISearchGeneric;
+  getSearchStrategy: <T extends TStrategyTypes>(name: T) => Promise<ISearchStrategy<T>>;
   __LEGACY: {
     esClient: LegacyApiCaller;
   };

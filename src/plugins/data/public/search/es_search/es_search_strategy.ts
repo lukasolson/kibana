@@ -18,26 +18,27 @@
  */
 
 import { Observable } from 'rxjs';
+import { CoreSetup } from '../../../../../core/public';
 import { ES_SEARCH_STRATEGY, IEsSearchResponse } from '../../../common/search';
 import { SYNC_SEARCH_STRATEGY } from '../sync_search_strategy';
 import { getEsPreference } from './get_es_preference';
-import { ISearchContext, TSearchStrategyProvider, ISearchStrategy } from '../types';
+import { ISearch } from '../i_search';
+import { ISearchStrategy } from '../types';
 
-export const esSearchStrategyProvider: TSearchStrategyProvider<typeof ES_SEARCH_STRATEGY> = (
-  context: ISearchContext
-): ISearchStrategy<typeof ES_SEARCH_STRATEGY> => {
-  return {
-    search: (request, options) => {
-      if (typeof request.params.preference === 'undefined') {
-        const setPreference = context.core.uiSettings.get('courier:setRequestPreference');
-        const customPreference = context.core.uiSettings.get('courier:customRequestPreference');
-        request.params.preference = getEsPreference(setPreference, customPreference);
-      }
-      const syncStrategyProvider = context.getSearchStrategy(SYNC_SEARCH_STRATEGY);
-      return syncStrategyProvider(context).search(
-        { ...request, serverStrategy: ES_SEARCH_STRATEGY },
-        options
-      ) as Observable<IEsSearchResponse>;
-    },
+export const esSearchStrategyProvider = async (
+  core: CoreSetup,
+  syncSearchStrategy: Promise<ISearchStrategy<typeof SYNC_SEARCH_STRATEGY>>
+) => {
+  const { search: syncSearch } = await syncSearchStrategy;
+  const search: ISearch<typeof ES_SEARCH_STRATEGY> = (request, options) => {
+    if (typeof request.params.preference === 'undefined') {
+      const setPreference = core.uiSettings.get('courier:setRequestPreference');
+      const customPreference = core.uiSettings.get('courier:customRequestPreference');
+      request.params.preference = getEsPreference(setPreference, customPreference);
+    }
+    return syncSearch({ ...request, serverStrategy: ES_SEARCH_STRATEGY }, options) as Observable<
+      IEsSearchResponse
+    >;
   };
+  return { search };
 };

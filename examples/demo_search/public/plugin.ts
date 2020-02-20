@@ -17,14 +17,18 @@
  * under the License.
  */
 
-import { DataPublicPluginSetup } from '../../../src/plugins/data/public';
+import { DataPublicPluginSetup, DataPublicPluginStart } from '../../../src/plugins/data/public';
 import { Plugin, CoreSetup } from '../../../src/core/public';
 import { DEMO_SEARCH_STRATEGY } from '../common';
 import { demoClientSearchStrategyProvider } from './demo_search_strategy';
 import { IDemoRequest, IDemoResponse } from '../common';
 
-interface DemoDataSearchSetupDependencies {
+export interface DemoDataSearchSetupDependencies {
   data: DataPublicPluginSetup;
+}
+
+export interface DemoDataSearchStartDependencies {
+  data: DataPublicPluginStart;
 }
 
 /**
@@ -47,10 +51,13 @@ declare module '../../../src/plugins/data/public' {
 }
 
 export class DemoDataPlugin implements Plugin {
-  public setup(core: CoreSetup, deps: DemoDataSearchSetupDependencies) {
-    deps.data.search.registerSearchStrategyProvider(
+  public setup(
+    core: CoreSetup<DemoDataSearchStartDependencies>,
+    deps: DemoDataSearchSetupDependencies
+  ) {
+    deps.data.search.registerSearchStrategy(
       DEMO_SEARCH_STRATEGY,
-      demoClientSearchStrategyProvider
+      demoClientSearchStrategyProvider(core)
     );
   }
 

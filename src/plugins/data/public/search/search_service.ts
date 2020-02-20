@@ -17,10 +17,11 @@
  * under the License.
  */
 
+import { from } from 'rxjs';
+import { mergeMap } from 'rxjs/operators';
 import { Plugin, CoreSetup, CoreStart, PackageInfo } from '../../../../core/public';
-
 import { SYNC_SEARCH_STRATEGY, syncSearchStrategyProvider } from './sync_search_strategy';
-import { ISearchSetup, ISearchStart, TSearchStrategyProvider, TSearchStrategiesMap } from './types';
+import { ISearchSetup, ISearchStart, ISearchStrategy } from './types';
 import { TStrategyTypes } from './strategy_types';
 import { getEsClient, LegacyApiCaller } from './es_client';
 import { ES_SEARCH_STRATEGY, DEFAULT_SEARCH_STRATEGY } from '../../common/search';
@@ -40,45 +41,49 @@ export class SearchService implements Plugin<ISearchSetup, ISearchStart> {
    * A mapping of search strategies keyed by a unique identifier.  Plugins can use this unique identifier
    * to override certain strategy implementations.
    */
-  private searchStrategies: TSearchStrategiesMap = {};
+  private searchStrategies: {
+    [K in TStrategyTypes]?: Promise<ISearchStrategy<any>>;
+  } = {};
 
   private esClient?: LegacyApiCaller;
 
-  private registerSearchStrategyProvider = <T extends TStrategyTypes>(
+  private registerSearchStrategy = <T extends TStrategyTypes>(
     name: T,
-    strategyProvider: TSearchStrategyProvider<T>
+    searchStrategy: Promise<ISearchStrategy<T>>
   ) => {
-    this.searchStrategies[name] = strategyProvider;
+    this.searchStrategies[name] = searchStrategy;
   };
 
-  private getSearchStrategy = <T extends TStrategyTypes>(name: T): TSearchStrategyProvider<T> => {
-    const strategyProvider = this.searchStrategies[name];
-    if (!strategyProvider) throw new Error(`Search strategy ${name} not found`);
-    return strategyProvider;
+  private getSearchStrategy = <T extends TStrategyTypes>(name: T): Promise<ISearchStrategy<T>> => {
+    const searchStrategy = this.searchStrategies[name];
+    if (!searchStrategy) throw new Error(`Search strategy ${name} not found`);
+    return searchStrategy;
   };
 
   public setup(core: CoreSetup, packageInfo: PackageInfo): ISearchSetup {
     this.esClient = getEsClient(core.injectedMetadata, core.http, packageInfo);
-
-    this.registerSearchStrategyProvider(SYNC_SEARCH_STRATEGY, syncSearchStrategyProvider);
-
-    this.registerSearchStrategyProvider(ES_SEARCH_STRATEGY, esSearchStrategyProvider);
-
+    const syncSearchStrategy = syncSearchStrategyProvider(core);
+    this.registerSearchStrategy(SYNC_SEARCH_STRATEGY, syncSearchStrategy);
+    this.registerSearchStrategy(
+      ES_SEARCH_STRATEGY,
+      esSearchStrategyProvider(core, syncSearchStrategy)
+    );
     return {
-      registerSearchStrategyProvider: this.registerSearchStrategyProvider,
+      registerSearchStrategy: this.registerSearchStrategy,
     };
   }
 
   public start(core: CoreStart): ISearchStart {
     return {
       search: (request, options, strategyName) => {
-        const strategyProvider = this.getSearchStrategy(strategyName || DEFAULT_SEARCH_STRATEGY);
-        const { search } = strategyProvider({
-          core,
-          getSearchStrategy: this.getSearchStrategy,
-        });
-        return search(request as any, options);
+        const searchStrategy = this.getSearchStrategy(strategyName || DEFAULT_SEARCH_STRATEGY);
+        return from(searchStrategy).pipe(
+          mergeMap(({ search }) => {
+            return search(request as any, options);
+          })
+        );
       },
+      getSearchStrategy: this.getSearchStrategy,
       __LEGACY: {
         esClient: this.esClient!,
       },

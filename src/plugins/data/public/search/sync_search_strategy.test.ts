@@ -19,29 +19,26 @@
 
 import { coreMock } from '../../../../core/public/mocks';
 import { SYNC_SEARCH_STRATEGY, syncSearchStrategyProvider } from './sync_search_strategy';
-import { CoreStart } from 'kibana/public';
+import { CoreSetup } from 'kibana/public';
 
 describe('Sync search strategy', () => {
-  let mockCoreStart: MockedKeys<CoreStart>;
+  let mockCoreSetup: MockedKeys<CoreSetup>;
 
   beforeEach(() => {
-    mockCoreStart = coreMock.createStart();
+    mockCoreSetup = coreMock.createSetup();
   });
 
-  it('returns a strategy with `search` that calls the backend API', () => {
-    mockCoreStart.http.fetch.mockImplementationOnce(() => Promise.resolve());
+  it('returns a strategy with `search` that calls the backend API', async () => {
+    mockCoreSetup.http.fetch.mockImplementationOnce(() => Promise.resolve());
 
-    const syncSearch = syncSearchStrategyProvider({
-      core: mockCoreStart,
-      getSearchStrategy: jest.fn(),
-    });
+    const syncSearch = await syncSearchStrategyProvider(mockCoreSetup);
     syncSearch.search(
       {
         serverStrategy: SYNC_SEARCH_STRATEGY,
       },
       {}
     );
-    expect(mockCoreStart.http.fetch.mock.calls[0][0]).toEqual({
+    expect(mockCoreSetup.http.fetch.mock.calls[0][0]).toEqual({
       path: `/internal/search/${SYNC_SEARCH_STRATEGY}`,
       body: JSON.stringify({
         serverStrategy: 'SYNC_SEARCH_STRATEGY',

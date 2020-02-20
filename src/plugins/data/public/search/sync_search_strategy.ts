@@ -20,7 +20,7 @@
 import { BehaviorSubject, from } from 'rxjs';
 import { IKibanaSearchRequest, IKibanaSearchResponse } from '../../common/search';
 import { ISearch, ISearchOptions } from './i_search';
-import { TSearchStrategyProvider, ISearchStrategy, ISearchContext } from './types';
+import { CoreSetup } from '../../../../core/public';
 
 export const SYNC_SEARCH_STRATEGY = 'SYNC_SEARCH_STRATEGY';
 
@@ -28,11 +28,9 @@ export interface ISyncSearchRequest extends IKibanaSearchRequest {
   serverStrategy: string;
 }
 
-export const syncSearchStrategyProvider: TSearchStrategyProvider<typeof SYNC_SEARCH_STRATEGY> = (
-  context: ISearchContext
-): ISearchStrategy<typeof SYNC_SEARCH_STRATEGY> => {
+export const syncSearchStrategyProvider = async (core: CoreSetup) => {
   const loadingCount$ = new BehaviorSubject(0);
-  context.core.http.addLoadingCountSource(loadingCount$);
+  core.http.addLoadingCountSource(loadingCount$);
 
   const search: ISearch<typeof SYNC_SEARCH_STRATEGY> = (
     request: ISyncSearchRequest,
@@ -40,7 +38,7 @@ export const syncSearchStrategyProvider: TSearchStrategyProvider<typeof SYNC_SEA
   ) => {
     loadingCount$.next(loadingCount$.getValue() + 1);
 
-    const response: Promise<IKibanaSearchResponse> = context.core.http.fetch({
+    const response: Promise<IKibanaSearchResponse> = core.http.fetch({
       path: `/internal/search/${request.serverStrategy}`,
       method: 'POST',
       body: JSON.stringify(request),
