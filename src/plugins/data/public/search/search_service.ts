@@ -99,6 +99,7 @@ export class SearchService implements Plugin<ISearchSetup, ISearchStart> {
      * their own search collector instances
      */
     const searchInterceptor = new SearchInterceptor(
+      core.notifications.toasts,
       core.injectedMetadata.getInjectedVar('esRequestTimeout') as number
     );
 
@@ -114,9 +115,6 @@ export class SearchService implements Plugin<ISearchSetup, ISearchStart> {
         },
         types: aggTypesStart,
       },
-      cancel: () => searchInterceptor.cancelPending(),
-      getPendingCount$: () => searchInterceptor.getPendingCount$(),
-      runBeyondTimeout: () => searchInterceptor.runBeyondTimeout(),
       search: (request, options, strategyName) => {
         const strategyProvider = this.getSearchStrategy(strategyName || DEFAULT_SEARCH_STRATEGY);
         const { search } = strategyProvider({
