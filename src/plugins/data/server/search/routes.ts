@@ -42,13 +42,13 @@ export function registerSearchRoute(router: IRouter): void {
         const response = await context.search!.search(searchRequest, { signal }, strategy);
         return res.ok({ body: response });
       } catch (err) {
+        const error =
+          typeof err === 'string' ? JSON.stringify(err) : err.body?.error || err.message;
         return res.customError({
           statusCode: err.statusCode || 500,
           body: {
             message: err.message,
-            attributes: {
-              error: JSON.stringify(err), // err.body?.error || err.message,
-            },
+            attributes: { error },
           },
         });
       }
