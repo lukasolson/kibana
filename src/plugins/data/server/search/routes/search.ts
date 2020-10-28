@@ -19,6 +19,7 @@
 
 import { schema } from '@kbn/config-schema';
 import { IRouter } from 'src/core/server';
+import { first } from 'rxjs/operators';
 import { getRequestAbortedSignal } from '../../lib';
 import { shimHitsTotal } from './shim_hits_total';
 
@@ -51,6 +52,7 @@ export function registerSearchRoute(router: IRouter): void {
               strategy,
             }
           )
+          .pipe(first())
           .toPromise();
 
         return res.ok({
