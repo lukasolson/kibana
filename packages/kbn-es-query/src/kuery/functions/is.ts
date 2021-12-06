@@ -16,6 +16,7 @@ import { getPhraseScript } from '../../filters';
 import { getDataViewFieldSubtypeNested, getTimeZoneFromSettings } from '../../utils';
 import * as ast from '../ast';
 import { KQL_NODE_TYPE_FUNCTION } from '../node_types/function';
+import { isNode as isLiteralNode } from '../node_types/literal';
 import { KQL_WILDCARD_SYMBOL, KqlWildcardNode, toQueryStringQuery } from '../node_types/wildcard';
 import { getFields } from './utils/get_fields';
 import { getFullFieldNameNode } from './utils/get_full_field_name_node';
@@ -24,8 +25,7 @@ export const KQL_FUNCTION_NAME_IS = 'is';
 
 type KqlIsFunctionArgs = [
   KqlLiteralNode | KqlWildcardNode, // Field name
-  KqlLiteralNode | KqlWildcardNode, // Value
-  KqlLiteralNode // Is this a "phrase" value? (surrounded in quotes)
+  KqlLiteralNode | KqlWildcardNode // Value
 ];
 
 export interface KqlIsFunctionNode extends KqlFunctionNode {
@@ -37,11 +37,7 @@ export function isNode(node: KqlFunctionNode): node is KqlIsFunctionNode {
   return node.function === KQL_FUNCTION_NAME_IS;
 }
 
-export function buildNode(
-  fieldName: string | null,
-  value: KqlLiteralType,
-  isPhrase: boolean = false
-): KqlIsFunctionNode {
+export function buildNode(fieldName: string | null, value: KqlLiteralType): KqlIsFunctionNode {
   const fieldNameNode =
     fieldName === null
       ? nodeTypes.literal.buildNode(fieldName)
@@ -50,7 +46,7 @@ export function buildNode(
     typeof value !== 'string'
       ? nodeTypes.literal.buildNode(value)
       : ast.fromLiteralExpression(value);
-  const args: KqlIsFunctionArgs = [fieldNameNode, valueNode, nodeTypes.literal.buildNode(isPhrase)];
+  const args: KqlIsFunctionArgs = [fieldNameNode, valueNode];
   return {
     type: KQL_NODE_TYPE_FUNCTION,
     function: KQL_FUNCTION_NAME_IS,
@@ -58,8 +54,14 @@ export function buildNode(
   };
 }
 
+export function toKqlExpression({ arguments: [fieldNameArg, valueArg] }: KqlIsFunctionNode) {
+  const fieldName = ast.toKqlExpression(fieldNameArg);
+  const value = ast.toKqlExpression(valueArg);
+  return `${fieldName} : ${value}`;
+}
+
 export function toElasticsearchQuery(
-  { arguments: [fieldNameArg, valueArg, isPhraseArg] }: KqlIsFunctionNode,
+  { arguments: [fieldNameArg, valueArg] }: KqlIsFunctionNode,
   indexPattern?: DataViewBase,
   config: KueryQueryOptions = {},
   context: KqlContext = {}
@@ -79,7 +81,7 @@ export function toElasticsearchQuery(
     context?.nested ? context.nested.path : undefined
   );
   const value = !isUndefined(valueArg) ? ast.toElasticsearchQuery(valueArg) : valueArg;
-  const type = isPhraseArg.value ? 'phrase' : 'best_fields';
+  const type = isLiteralNode(valueArg) && valueArg.isPhrase ? 'phrase' : 'best_fields';
   if (fullFieldNameArg.value === null) {
     if (valueArg.type === 'wildcard') {
       return {

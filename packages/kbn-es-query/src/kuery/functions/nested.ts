@@ -40,6 +40,14 @@ export function buildNode(nestedPath: string, nestedQuery: KqlFunctionNode): Kql
   };
 }
 
+export function toKqlExpression({
+  arguments: [nestedPathArg, nestedQueryArg],
+}: KqlNestedFunctionNode) {
+  const nestedPath = ast.toKqlExpression(nestedPathArg);
+  const nestedQuery = ast.toKqlExpression(nestedQueryArg);
+  return `${nestedPath} : { ${nestedQuery} }`;
+}
+
 export function toElasticsearchQuery(
   { arguments: [nestedPath, nestedQuery] }: KqlNestedFunctionNode,
   indexPattern?: DataViewBase,

@@ -53,6 +53,22 @@ export function buildNode(
   };
 }
 
+export function toKqlExpression({
+  arguments: [fieldNameArg, operatorArg, valueArg],
+}: KqlRangeFunctionNode) {
+  const fieldName = ast.toKqlExpression(fieldNameArg);
+  const operator =
+    operatorArg.value === 'gt'
+      ? '>'
+      : operatorArg.value === 'gte'
+      ? '>='
+      : operatorArg.value === 'lt'
+      ? '<'
+      : '<=';
+  const value = ast.toKqlExpression(valueArg);
+  return `${fieldName} ${operator} ${value}`;
+}
+
 export function toElasticsearchQuery(
   { arguments: [fieldNameArg, operatorArg, valueArg] }: KqlRangeFunctionNode,
   indexPattern?: DataViewBase,

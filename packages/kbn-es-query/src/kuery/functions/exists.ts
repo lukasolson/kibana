@@ -36,6 +36,10 @@ export function buildNode(fieldName: string): KqlExistsFunctionNode {
   };
 }
 
+export function toKqlExpression({ arguments: [fieldNameArg] }: KqlExistsFunctionNode) {
+  return `${fieldNameArg} : *`;
+}
+
 export function toElasticsearchQuery(
   { arguments: [fieldNameArg] }: KqlExistsFunctionNode,
   indexPattern?: DataViewBase,

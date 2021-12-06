@@ -49,6 +49,25 @@ export function buildNode(fnName: KqlFunctionName, args: KqlNode[]): KqlFunction
   };
 }
 
+export function toKqlExpression(node: KqlFunctionNode) {
+  if (functions.and.isNode(node)) {
+    return functions.and.toKqlExpression(node);
+  } else if (functions.exists.isNode(node)) {
+    return functions.exists.toKqlExpression(node);
+  } else if (functions.is.isNode(node)) {
+    return functions.is.toKqlExpression(node);
+  } else if (functions.nested.isNode(node)) {
+    return functions.nested.toKqlExpression(node);
+  } else if (functions.not.isNode(node)) {
+    return functions.not.toKqlExpression(node);
+  } else if (functions.or.isNode(node)) {
+    return functions.or.toKqlExpression(node);
+  } else if (functions.range.isNode(node)) {
+    return functions.range.toKqlExpression(node);
+  }
+  throw new Error(`Unsupported KQL function: ${node.function}`);
+}
+
 export function toElasticsearchQuery(
   node: KqlFunctionNode,
   indexPattern?: DataViewBase,

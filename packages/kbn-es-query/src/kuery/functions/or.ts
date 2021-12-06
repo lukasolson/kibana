@@ -11,6 +11,7 @@ import type { KqlFunctionNode } from '../node_types/function';
 import type { KqlContext } from '../types';
 import { nodeTypes } from '../..';
 import { KQL_NODE_TYPE_FUNCTION } from '../node_types/function';
+import * as ast from '../ast';
 
 export const KQL_FUNCTION_NAME_OR = 'or';
 
@@ -29,6 +30,10 @@ export function buildNode(subQueries: KqlFunctionNode[]): KqlOrFunctionNode {
     function: KQL_FUNCTION_NAME_OR,
     arguments: subQueries,
   };
+}
+
+export function toKqlExpression({ arguments: nodes }: KqlOrFunctionNode) {
+  return nodes.map(ast.toKqlExpression).join(' OR ');
 }
 
 export function toElasticsearchQuery(

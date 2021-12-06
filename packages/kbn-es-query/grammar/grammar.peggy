@@ -15,7 +15,7 @@
     wildcardSymbol = '@kuery-wildcard@', // The symbol representing where a wildcard character is found
   } = options;
 
-  const buildLiteralNode = (value) => ({ type: 'literal', value });
+  const buildLiteralNode = (value, isPhrase = false) => ({ type: 'literal', value, isPhrase });
   const buildWildcardNode = (value) => ({ type: 'wildcard', value });
   const buildFunctionNode = (fn, args) => ({ type: 'function', function: fn, arguments: args });
 }
@@ -188,8 +188,7 @@ NotListOfValues
 Value "value"
   = value:QuotedString {
     if (value.type === 'cursor') return value;
-    const isPhrase = buildLiteralNode(true);
-    return (field) => buildFunctionNode('is', [field, value, isPhrase]);
+    return (field) => buildFunctionNode('is', [field, value]);
   }
   / value:UnquotedLiteral {
     if (value.type === 'cursor') return value;
@@ -203,8 +202,7 @@ Value "value"
       error('Leading wildcards are disabled. See query:allowLeadingWildcards in Advanced Settings.');
     }
 
-    const isPhrase = buildLiteralNode(false);
-    return (field) => buildFunctionNode('is', [field, value, isPhrase]);
+    return (field) => buildFunctionNode('is', [field, value]);
   }
 
 Or "OR"
@@ -232,7 +230,7 @@ QuotedString
     };
   }
   / '"' chars:QuotedCharacter* '"' {
-    return buildLiteralNode(chars.join(''));
+    return buildLiteralNode(chars.join(''), true);
   }
 
 QuotedCharacter

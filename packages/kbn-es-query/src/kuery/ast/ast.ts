@@ -59,6 +59,17 @@ export const fromKueryExpression = (
   }
 };
 
+export function toKqlExpression(node: KqlNode): string {
+  if (nodeTypes.function.isNode(node)) {
+    return nodeTypes.function.toKqlExpression(node);
+  } else if (nodeTypes.literal.isNode(node)) {
+    return nodeTypes.literal.toKqlExpression(node);
+  } else if (nodeTypes.wildcard.isNode(node)) {
+    return nodeTypes.wildcard.toKqlExpression(node);
+  }
+  throw new Error(`Unsupported KQL node type: ${node.type}`);
+}
+
 /**
  * IndexPattern isn't required, but if you pass one in, we can be more intelligent
  * about how we craft the queries (e.g. scripted fields)

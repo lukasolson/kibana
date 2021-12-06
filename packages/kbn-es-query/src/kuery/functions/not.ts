@@ -11,6 +11,7 @@ import type { KqlFunctionNode } from '../node_types/function';
 import type { KqlContext } from '../types';
 import { nodeTypes } from '../..';
 import { KQL_NODE_TYPE_FUNCTION } from '../node_types/function';
+import * as ast from '../ast';
 
 export const KQL_FUNCTION_NAME_NOT = 'not';
 
@@ -29,6 +30,11 @@ export function buildNode(subQuery: KqlFunctionNode): KqlNotFunctionNode {
     function: KQL_FUNCTION_NAME_NOT,
     arguments: [subQuery],
   };
+}
+
+export function toKqlExpression({ arguments: [node] }: KqlNotFunctionNode) {
+  const expression = ast.toKqlExpression(node);
+  return `NOT ${expression}`;
 }
 
 export function toElasticsearchQuery(

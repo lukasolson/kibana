@@ -28,8 +28,9 @@ export function buildNode(value: string): KqlWildcardNode {
   };
 }
 
-export function toElasticsearchQuery(node: KqlWildcardNode) {
-  const { value } = node;
+export const toKqlExpression = toElasticsearchQuery;
+
+export function toElasticsearchQuery({ value }: KqlWildcardNode) {
   return `${value}`.split(KQL_WILDCARD_SYMBOL).join('*');
 }
 

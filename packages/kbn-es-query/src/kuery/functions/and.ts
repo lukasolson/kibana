@@ -31,6 +31,10 @@ export function buildNode(subQueries: KqlFunctionNode[]): KqlAndFunctionNode {
   };
 }
 
+export function toKqlExpression({ arguments: nodes }: KqlAndFunctionNode) {
+  return nodes.map(ast.toKqlExpression).join(' AND ');
+}
+
 export function toElasticsearchQuery(
   { arguments: nodes = [] }: KqlAndFunctionNode,
   indexPattern?: DataViewBase,
