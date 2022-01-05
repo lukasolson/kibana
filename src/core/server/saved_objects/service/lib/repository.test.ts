@@ -55,7 +55,6 @@ import { DocumentMigrator } from '../../migrations/core/document_migrator';
 import { mockKibanaMigrator } from '../../migrations/kibana_migrator.mock';
 import { LEGACY_URL_ALIAS_TYPE } from '../../object_types';
 import { elasticsearchClientMock } from '../../../elasticsearch/client/mocks';
-import * as esKuery from '@kbn/es-query';
 import { errors as EsErrors } from '@elastic/elasticsearch';
 import {
   SavedObjectsBulkCreateObject,
@@ -76,8 +75,7 @@ import {
   SavedObjectsUpdateObjectsSpacesOptions,
 } from 'kibana/server';
 import { InternalBulkResolveError } from './internal_bulk_resolve';
-
-const { nodeTypes } = esKuery;
+import { nodeBuilder } from '@kbn/es-query';
 
 // BEWARE: The SavedObjectClient depends on the implementation details of the SavedObjectsRepository
 // so any breaking changes to this repository are considered breaking changes to the SavedObjectsClient.
@@ -1328,7 +1326,7 @@ describe('SavedObjectsRepository', () => {
     describe('returns', () => {
       const expectSuccessResult = (
         { type, id }: TypeIdTuple,
-        doc: estypes.MgetHit<SavedObjectsRawDocSource>
+        doc: estypes.GetGetResult<SavedObjectsRawDocSource>
       ) => ({
         type,
         id,
@@ -1356,8 +1354,14 @@ describe('SavedObjectsRepository', () => {
         expect(client.mget).toHaveBeenCalledTimes(1);
         expect(result).toEqual({
           saved_objects: [
-            expectSuccessResult(obj1, response.docs[0]),
-            expectSuccessResult(obj2, response.docs[1]),
+            expectSuccessResult(
+              obj1,
+              response.docs[0] as estypes.GetGetResult<SavedObjectsRawDocSource>
+            ),
+            expectSuccessResult(
+              obj2,
+              response.docs[1] as estypes.GetGetResult<SavedObjectsRawDocSource>
+            ),
           ],
         });
       });
@@ -1377,9 +1381,15 @@ describe('SavedObjectsRepository', () => {
         expect(client.mget).toHaveBeenCalledTimes(1);
         expect(result).toEqual({
           saved_objects: [
-            expectSuccessResult(obj1, response.docs[0]),
+            expectSuccessResult(
+              obj1,
+              response.docs[0] as estypes.GetGetResult<SavedObjectsRawDocSource>
+            ),
             expectError(obj),
-            expectSuccessResult(obj2, response.docs[1]),
+            expectSuccessResult(
+              obj2,
+              response.docs[1] as estypes.GetGetResult<SavedObjectsRawDocSource>
+            ),
           ],
         });
       });
@@ -2272,7 +2282,16 @@ describe('SavedObjectsRepository', () => {
 
       it(`self-generates an id if none is provided`, async () => {
         await createSuccess(type, attributes);
-        expect(client.create).toHaveBeenCalledWith(
+        expect(client.create).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({
+            id: expect.objectContaining(/index-pattern:[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}/),
+          }),
+          expect.anything()
+        );
+        await createSuccess(type, attributes, { id: '' });
+        expect(client.create).toHaveBeenNthCalledWith(
+          2,
           expect.objectContaining({
             id: expect.objectContaining(/index-pattern:[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}/),
           }),
@@ -3558,6 +3577,20 @@ describe('SavedObjectsRepository', () => {
         });
       });
 
+      it('search for the right fields when typeToNamespacesMap is set', async () => {
+        const relevantOpts = {
+          ...commonOptions,
+          fields: ['title'],
+          type: '',
+          namespaces: [],
+          typeToNamespacesMap: new Map([[type, [namespace]]]),
+        };
+
+        await findSuccess(relevantOpts, namespace);
+        const esOptions = client.search.mock.calls[0][0];
+        expect(esOptions?._source ?? []).toContain('index-pattern.title');
+      });
+
       it(`accepts hasReferenceOperator`, async () => {
         const relevantOpts: SavedObjectsFindOptions = {
           ...commonOptions,
@@ -3650,7 +3683,7 @@ describe('SavedObjectsRepository', () => {
             type: 'foo',
             id: '1',
           },
-          filter: nodeTypes.function.buildNode('is', `dashboard.attributes.otherField`, '*'),
+          filter: nodeBuilder.is(`dashboard.attributes.otherField`, '*'),
         };
 
         await findSuccess(findOpts, namespace);
@@ -4145,6 +4178,13 @@ describe('SavedObjectsRepository', () => {
         await test(42);
         await test(false);
         await test({});
+      });
+
+      it(`throws when id is empty`, async () => {
+        await expect(
+          savedObjectsRepository.incrementCounter(type, '', counterFields)
+        ).rejects.toThrowError(createBadRequestError('id cannot be empty'));
+        expect(client.update).not.toHaveBeenCalled();
       });
 
       it(`throws when counterField is not CounterField type`, async () => {
@@ -4670,6 +4710,13 @@ describe('SavedObjectsRepository', () => {
 
       it(`throws when type is hidden`, async () => {
         await expectNotFoundError(HIDDEN_TYPE, id);
+        expect(client.update).not.toHaveBeenCalled();
+      });
+
+      it(`throws when id is empty`, async () => {
+        await expect(savedObjectsRepository.update(type, '', attributes)).rejects.toThrowError(
+          createBadRequestError('id cannot be empty')
+        );
         expect(client.update).not.toHaveBeenCalled();
       });
 

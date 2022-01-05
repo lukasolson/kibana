@@ -9,8 +9,8 @@ import Boom from '@hapi/boom';
 import type * as estypes from '@elastic/elasticsearch/lib/api/typesWithBodyKey';
 import type { SavedObjectsClientContract, ElasticsearchClient } from 'src/core/server';
 
-import type { KueryNode } from '@kbn/es-query';
-import { fromKueryExpression, toElasticsearchQuery } from '@kbn/es-query';
+import type { KqlFunctionNode } from '@kbn/es-query';
+import { fromKueryExpression, nodeBuilder, toElasticsearchQuery } from '@kbn/es-query';
 
 import type { AgentSOAttributes, Agent, BulkActionResult, ListWithKuery } from '../../types';
 import { appContextService, agentPolicyService } from '../../services';
@@ -25,33 +25,16 @@ import { searchHitToAgent, agentSOAttributesToFleetServerAgentDoc } from './help
 const ACTIVE_AGENT_CONDITION = 'active:true';
 const INACTIVE_AGENT_CONDITION = `NOT (${ACTIVE_AGENT_CONDITION})`;
 
-function _joinFilters(filters: Array<string | undefined | KueryNode>): KueryNode | undefined {
+function _joinFilters(filters: Array<string | undefined | KqlFunctionNode>) {
   try {
-    return filters
-      .filter((filter) => filter !== undefined)
-      .reduce(
-        (
-          acc: KueryNode | undefined,
-          kuery: string | KueryNode | undefined
-        ): KueryNode | undefined => {
-          if (kuery === undefined) {
-            return acc;
-          }
-          const kueryNode: KueryNode =
-            typeof kuery === 'string' ? fromKueryExpression(removeSOAttributes(kuery)) : kuery;
-
-          if (!acc) {
-            return kueryNode;
-          }
-
-          return {
-            type: 'function',
-            function: 'and',
-            arguments: [acc, kueryNode],
-          };
-        },
-        undefined as KueryNode | undefined
+    const kqlNodes = filters
+      .filter((filter): filter is string | KqlFunctionNode => filter !== undefined)
+      .map((kuery) =>
+        typeof kuery === 'string'
+          ? fromKueryExpression<KqlFunctionNode>(removeSOAttributes(kuery))
+          : kuery
       );
+    return nodeBuilder.and(kqlNodes);
   } catch (err) {
     throw new IngestManagerError(`Kuery is malformed: ${err.message}`);
   }
@@ -232,11 +215,11 @@ export async function getAgentById(esClient: ElasticsearchClient, agentId: strin
 
 export function isAgentDocument(
   maybeDocument: any
-): maybeDocument is estypes.MgetHit<FleetServerAgent> {
+): maybeDocument is estypes.MgetResponseItem<FleetServerAgent> {
   return '_id' in maybeDocument && '_source' in maybeDocument;
 }
 
-export type ESAgentDocumentResult = estypes.MgetHit<FleetServerAgent>;
+export type ESAgentDocumentResult = estypes.MgetResponseItem<FleetServerAgent>;
 
 export async function getAgentDocuments(
   esClient: ElasticsearchClient,
@@ -337,6 +320,7 @@ export async function bulkUpdateAgents(
     items: res.body.items.map((item) => ({
       id: item.update!._id as string,
       success: !item.update!.error,
+      // @ts-expect-error it not assignable to ErrorCause
       error: item.update!.error as Error,
     })),
   };

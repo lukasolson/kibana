@@ -15,9 +15,6 @@ import {
   toggleFilterDisabled as oldToggleFilterDisabled,
   isFilterDisabled as oldIsFilterDisabled,
   disableFilter as oldDisableFilter,
-  fromKueryExpression as oldFromKueryExpression,
-  toElasticsearchQuery as oldToElasticsearchQuery,
-  nodeTypes as oldNodeTypes,
   buildEsQuery as oldBuildEsQuery,
   buildQueryFromFilters as oldBuildQueryFromFilters,
   luceneStringToDsl as oldLuceneStringToDsl,
@@ -25,7 +22,6 @@ import {
   getPhraseFilterField as oldgetPhraseFilterField,
   getPhraseFilterValue as oldgetPhraseFilterValue,
   isFilterPinned as oldIsFilterPinned,
-  nodeBuilder as oldNodeBuilder,
   isFilters as oldIsFilters,
   isExistsFilter as oldIsExistsFilter,
   isMatchAllFilter as oldIsMatchAllFilter,
@@ -84,21 +80,6 @@ const disableFilter = oldDisableFilter;
  * @deprecated Import from the "@kbn/es-query" package directly instead.
  * @removeBy 8.1
  */
-const fromKueryExpression = oldFromKueryExpression;
-/**
- * @deprecated Import from the "@kbn/es-query" package directly instead.
- * @removeBy 8.1
- */
-const toElasticsearchQuery = oldToElasticsearchQuery;
-/**
- * @deprecated Import from the "@kbn/es-query" package directly instead.
- * @removeBy 8.1
- */
-const nodeTypes = oldNodeTypes;
-/**
- * @deprecated Import from the "@kbn/es-query" package directly instead.
- * @removeBy 8.1
- */
 const buildEsQuery = oldBuildEsQuery;
 /**
  * @deprecated Import from the "@kbn/es-query" package directly instead.
@@ -133,12 +114,6 @@ const getPhraseFilterValue = oldgetPhraseFilterValue;
  * @removeBy 8.1
  */
 const isFilterPinned = oldIsFilterPinned;
-
-/**
- * @deprecated Import from the "@kbn/es-query" package directly instead.
- * @removeBy 8.1
- */
-const nodeBuilder = oldNodeBuilder;
 
 /**
  * @deprecated Import from the "@kbn/es-query" package directly instead.
@@ -395,9 +370,6 @@ export {
   pinFilter,
   toggleFilterDisabled,
   disableFilter,
-  fromKueryExpression,
-  toElasticsearchQuery,
-  nodeTypes,
   buildEsQuery,
   buildQueryFromFilters,
   luceneStringToDsl,
@@ -405,7 +377,6 @@ export {
   getPhraseFilterField,
   getPhraseFilterValue,
   isFilterPinned,
-  nodeBuilder,
   isFilters,
   isExistsFilter,
   isMatchAllFilter,

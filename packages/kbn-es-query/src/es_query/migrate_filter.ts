@@ -9,7 +9,7 @@
 import { get, omit } from 'lodash';
 import { getConvertedValueForField } from '../filters';
 import { Filter } from '../filters';
-import { IndexPatternBase } from './types';
+import { DataViewBase } from './types';
 
 // See https://www.elastic.co/guide/en/elasticsearch/reference/2.0/query-dsl-match-query.html
 /** @internal */
@@ -23,7 +23,7 @@ export interface DeprecatedMatchPhraseFilter extends Filter {
 }
 
 function isDeprecatedMatchPhraseFilter(filter: Filter): filter is DeprecatedMatchPhraseFilter {
-  const [fieldName] = Object.keys(get(filter, 'match') || get(filter, 'query.match'));
+  const [fieldName] = Object.keys(get(filter, 'match') ?? get(filter, 'query.match') ?? {});
   return Boolean(
     fieldName &&
       (get(filter, ['query', 'match', fieldName, 'type']) === 'phrase' ||
@@ -32,7 +32,7 @@ function isDeprecatedMatchPhraseFilter(filter: Filter): filter is DeprecatedMatc
 }
 
 /** @internal */
-export function migrateFilter(filter: Filter, indexPattern?: IndexPatternBase) {
+export function migrateFilter(filter: Filter, indexPattern?: DataViewBase) {
   if (isDeprecatedMatchPhraseFilter(filter)) {
     const match = filter.match ?? filter.query?.match;
     const fieldName = Object.keys(match)[0];

@@ -6,19 +6,19 @@
  */
 
 import { remove, uniq } from 'lodash';
-import { nodeBuilder, KueryNode } from '@kbn/es-query';
-import { OWNER_FIELD } from '../../common';
+import { nodeBuilder, KqlFunctionNode } from '@kbn/es-query';
+import { OWNER_FIELD } from '../../common/api';
 
 export const getOwnersFilter = (
   savedObjectType: string,
   owners: string[]
-): KueryNode | undefined => {
+): KqlFunctionNode | undefined => {
   if (owners.length <= 0) {
     return;
   }
 
   return nodeBuilder.or(
-    owners.reduce<KueryNode[]>((query, owner) => {
+    owners.reduce<KqlFunctionNode[]>((query, owner) => {
       ensureFieldIsSafeForQuery(OWNER_FIELD, owner);
       query.push(nodeBuilder.is(`${savedObjectType}.attributes.${OWNER_FIELD}`, owner));
       return query;
@@ -27,9 +27,9 @@ export const getOwnersFilter = (
 };
 
 export const combineFilterWithAuthorizationFilter = (
-  filter?: KueryNode,
-  authorizationFilter?: KueryNode
-) => {
+  filter?: KqlFunctionNode,
+  authorizationFilter?: KqlFunctionNode
+): KqlFunctionNode | undefined => {
   if (!filter && !authorizationFilter) {
     return;
   }

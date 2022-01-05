@@ -12,28 +12,27 @@ import { fold } from 'fp-ts/lib/Either';
 import { identity } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-import { nodeBuilder, fromKueryExpression, KueryNode } from '@kbn/es-query';
+import { nodeBuilder, fromKueryExpression, KqlFunctionNode } from '@kbn/es-query';
+import { CASE_SAVED_OBJECT, SUB_CASE_SAVED_OBJECT } from '../../common/constants';
 import {
+  OWNER_FIELD,
   AlertCommentRequestRt,
   ActionsCommentRequestRt,
-  CASE_SAVED_OBJECT,
   CaseStatuses,
   CaseType,
   CommentRequest,
   ContextTypeUserRt,
   excess,
-  OWNER_FIELD,
-  SUB_CASE_SAVED_OBJECT,
   throwErrors,
-} from '../../common';
+} from '../../common/api';
 import { combineFilterWithAuthorizationFilter } from '../authorization/utils';
 import {
   getIDsAndIndicesAsArrays,
   isCommentRequestTypeAlertOrGenAlert,
   isCommentRequestTypeUser,
   isCommentRequestTypeActions,
-  SavedObjectFindOptionsKueryNode,
-} from '../common';
+} from '../common/utils';
+import { SavedObjectFindOptionsKueryNode } from '../common/types';
 
 export const decodeCommentRequest = (comment: CommentRequest) => {
   if (isCommentRequestTypeUser(comment)) {
@@ -103,10 +102,10 @@ export const addStatusFilter = ({
   type = CASE_SAVED_OBJECT,
 }: {
   status: CaseStatuses;
-  appendFilter?: KueryNode;
+  appendFilter?: KqlFunctionNode;
   type?: string;
-}): KueryNode => {
-  const filters: KueryNode[] = [];
+}): KqlFunctionNode => {
+  const filters: KqlFunctionNode[] = [];
   filters.push(nodeBuilder.is(`${type}.attributes.status`, status));
 
   if (appendFilter) {
@@ -128,7 +127,7 @@ export const buildFilter = ({
   field,
   operator,
   type = CASE_SAVED_OBJECT,
-}: FilterField): KueryNode | undefined => {
+}: FilterField): KqlFunctionNode | undefined => {
   if (filters === undefined) {
     return;
   }
@@ -149,9 +148,9 @@ export const buildFilter = ({
  */
 export const combineAuthorizedAndOwnerFilter = (
   owner?: string[] | string,
-  authorizationFilter?: KueryNode,
+  authorizationFilter?: KqlFunctionNode,
   savedObjectType?: string
-): KueryNode | undefined => {
+): KqlFunctionNode | undefined => {
   const ownerFilter = buildFilter({
     filters: owner,
     field: OWNER_FIELD,
@@ -163,11 +162,13 @@ export const combineAuthorizedAndOwnerFilter = (
 };
 
 /**
- * Combines Kuery nodes and accepts an array with a mixture of undefined and KueryNodes. This will filter out the undefined
- * filters and return a KueryNode with the filters and'd together.
+ * Combines Kuery nodes and accepts an array with a mixture of undefined and KqlFunctionNodes. This will filter out the undefined
+ * filters and return a KqlFunctionNode with the filters and'd together.
  */
-export function combineFilters(nodes: Array<KueryNode | undefined>): KueryNode | undefined {
-  const filters = nodes.filter((node): node is KueryNode => node !== undefined);
+export function combineFilters(
+  nodes: Array<KqlFunctionNode | undefined>
+): KqlFunctionNode | undefined {
+  const filters = nodes.filter((node): node is KqlFunctionNode => node !== undefined);
   if (filters.length <= 0) {
     return;
   }
@@ -177,12 +178,12 @@ export function combineFilters(nodes: Array<KueryNode | undefined>): KueryNode |
 /**
  * Creates a KueryNode from a string expression. Returns undefined if the expression is undefined.
  */
-export function stringToKueryNode(expression?: string): KueryNode | undefined {
+export function stringToKueryNode(expression?: string): KqlFunctionNode | undefined {
   if (!expression) {
     return;
   }
 
-  return fromKueryExpression(expression);
+  return fromKueryExpression<KqlFunctionNode>(expression);
 }
 
 /**
@@ -226,9 +227,12 @@ export const constructQueryOptions = ({
   sortByField?: string;
   caseType?: CaseType;
   owner?: string | string[];
-  authorizationFilter?: KueryNode;
-}): { case: SavedObjectFindOptionsKueryNode; subCase?: SavedObjectFindOptionsKueryNode } => {
-  const kueryNodeExists = (filter: KueryNode | null | undefined): filter is KueryNode =>
+  authorizationFilter?: KqlFunctionNode;
+}): {
+  case: SavedObjectFindOptionsKueryNode;
+  subCase?: SavedObjectFindOptionsKueryNode;
+} => {
+  const kueryNodeExists = (filter: KqlFunctionNode | null | undefined): filter is KqlFunctionNode =>
     filter != null;
 
   const tagsFilter = buildFilter({ filters: tags ?? [], field: 'tags', operator: 'or' });
@@ -251,9 +255,12 @@ export const constructQueryOptions = ({
         CaseType.individual
       );
 
-      const filters: KueryNode[] = [typeFilter, tagsFilter, reportersFilter, ownerFilter].filter(
-        kueryNodeExists
-      );
+      const filters: KqlFunctionNode[] = [
+        typeFilter,
+        tagsFilter,
+        reportersFilter,
+        ownerFilter,
+      ].filter(kueryNodeExists);
 
       const caseFilters =
         status != null
@@ -278,9 +285,12 @@ export const constructQueryOptions = ({
         CaseType.collection
       );
 
-      const filters: KueryNode[] = [typeFilter, tagsFilter, reportersFilter, ownerFilter].filter(
-        kueryNodeExists
-      );
+      const filters: KqlFunctionNode[] = [
+        typeFilter,
+        tagsFilter,
+        reportersFilter,
+        ownerFilter,
+      ].filter(kueryNodeExists);
       const caseFilters = filters.length > 1 ? nodeBuilder.and(filters) : filters[0];
       const subCaseFilters =
         status != null ? addStatusFilter({ status, type: SUB_CASE_SAVED_OBJECT }) : undefined;
@@ -322,9 +332,12 @@ export const constructQueryOptions = ({
           : typeIndividual;
       const statusAndType = nodeBuilder.or([statusFilter, typeParent]);
 
-      const filters: KueryNode[] = [statusAndType, tagsFilter, reportersFilter, ownerFilter].filter(
-        kueryNodeExists
-      );
+      const filters: KqlFunctionNode[] = [
+        statusAndType,
+        tagsFilter,
+        reportersFilter,
+        ownerFilter,
+      ].filter(kueryNodeExists);
 
       const caseFilters = filters.length > 1 ? nodeBuilder.and(filters) : filters[0];
       const subCaseFilters =

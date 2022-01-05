@@ -6,8 +6,7 @@
  * Side Public License, v 1.
  */
 
-import * as esKuery from '@kbn/es-query';
-
+import { nodeBuilder } from '@kbn/es-query';
 import { getErrorMessage as getEsErrorMessage } from '../../../../elasticsearch';
 import type { ISavedObjectTypeRegistry } from '../../../saved_objects_type_registry';
 import type { IndexMapping } from '../../../mappings';
@@ -66,10 +65,9 @@ export async function deleteLegacyUrlAliases(params: DeleteLegacyUrlAliasesParam
     return;
   }
 
-  const { buildNode } = esKuery.nodeTypes.function;
-  const match1 = buildNode('is', `${LEGACY_URL_ALIAS_TYPE}.targetType`, type);
-  const match2 = buildNode('is', `${LEGACY_URL_ALIAS_TYPE}.targetId`, id);
-  const kueryNode = buildNode('and', [match1, match2]);
+  const match1 = nodeBuilder.is(`${LEGACY_URL_ALIAS_TYPE}.targetType`, type);
+  const match2 = nodeBuilder.is(`${LEGACY_URL_ALIAS_TYPE}.targetId`, id);
+  const kueryNode = nodeBuilder.and([match1, match2]);
 
   try {
     await client.updateByQuery(

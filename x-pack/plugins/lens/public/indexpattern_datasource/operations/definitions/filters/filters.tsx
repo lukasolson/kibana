@@ -58,7 +58,7 @@ export const validateQuery = (input: Query, indexPattern: IndexPattern) => {
   let error: string | undefined;
 
   try {
-    if (input.language === 'kuery') {
+    if (input.language === 'kuery' && typeof input.query === 'string') {
       toElasticsearchQuery(fromKueryExpression(input.query), indexPattern);
     } else {
       luceneStringToDsl(input.query);
@@ -101,6 +101,15 @@ export const filtersOperation: OperationDefinition<FiltersIndexPatternColumn, 'n
               language: 'kuery',
             },
           },
+          ...((
+            previousColumn as { params?: { secondaryFields?: string[] } }
+          ).params?.secondaryFields?.map((field) => ({
+            label: '',
+            input: {
+              query: `${field} : *`,
+              language: 'kuery',
+            },
+          })) ?? []),
         ],
       };
     }
