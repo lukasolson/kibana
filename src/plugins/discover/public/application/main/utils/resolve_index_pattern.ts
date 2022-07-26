@@ -80,8 +80,7 @@ export async function loadIndexPattern(
   config: IUiSettingsClient
 ): Promise<IndexPatternData> {
   const indexPatternList = (await indexPatterns.getCache()) as unknown as IndexPatternSavedObject[];
-
-  const actualId = getIndexPatternId(id, indexPatternList, config.get('defaultIndex'));
+  const actualId = id || getIndexPatternId(id, indexPatternList, config.get('defaultIndex'));
   return {
     list: indexPatternList || [],
     loaded: await indexPatterns.get(actualId),
