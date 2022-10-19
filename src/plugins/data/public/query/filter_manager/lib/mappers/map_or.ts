@@ -6,18 +6,11 @@
  * Side Public License, v 1.
  */
 
-import { Filter, FilterItem, isCombinedFilter } from '@kbn/es-query';
+import { Filter, isOrFilter } from '@kbn/es-query';
 import { mapFilter } from '../map_filter';
 
-function mapParams(params: FilterItem[]): FilterItem[] {
-  return params.map((filterItem) => {
-    if (Array.isArray(filterItem)) return mapParams(filterItem);
-    return mapFilter(filterItem);
-  });
-}
-
-export const mapCombined = (filter: Filter) => {
-  if (!isCombinedFilter(filter)) {
+export const mapOr = (filter: Filter) => {
+  if (!isOrFilter(filter)) {
     throw filter;
   }
 
@@ -26,6 +19,6 @@ export const mapCombined = (filter: Filter) => {
   return {
     type,
     key,
-    params: mapParams(params),
+    params: params.map((param) => mapFilter(param)),
   };
 };
