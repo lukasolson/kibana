@@ -12,8 +12,7 @@ import { getKbnServerError, KbnServerError } from '@kbn/kibana-utils-plugin/serv
 import type { ISearchStrategy } from '../../types';
 
 export const esqlSearchStrategyProvider = (
-  logger: Logger,
-  useInternalUser: boolean = false
+  logger: Logger
 ): ISearchStrategy<any, any> => ({
   /**
    * @param request
@@ -43,6 +42,7 @@ export const esqlSearchStrategyProvider = (
           {
             signal: abortSignal,
             meta: true,
+            maxRetries: 0
           }
         );
         return {
