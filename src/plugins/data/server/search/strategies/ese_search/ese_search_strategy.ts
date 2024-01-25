@@ -7,7 +7,7 @@
  */
 
 import type { Observable } from 'rxjs';
-import type { IScopedClusterClient, Logger, SharedGlobalConfig } from '@kbn/core/server';
+import type { Logger, SharedGlobalConfig } from '@kbn/core/server';
 import { catchError, tap } from 'rxjs/operators';
 import type * as estypes from '@elastic/elasticsearch/lib/api/typesWithBodyKey';
 import { firstValueFrom, from } from 'rxjs';
@@ -45,41 +45,86 @@ export const enhancedEsSearchStrategyProvider = (
   usage?: SearchUsage,
   useInternalUser: boolean = false
 ): ISearchStrategy<IEsSearchRequest<IAsyncSearchRequestParams>> => {
-  function cancelAsyncSearch(id: string, esClient: IScopedClusterClient) {
+  async function submitAsyncSearch(
+    request: IEsSearchRequest<IAsyncSearchRequestParams>,
+    options: IAsyncSearchOptions,
+    { esClient, uiSettingsClient }: SearchStrategyDependencies
+  ) {
     const client = useInternalUser ? esClient.asInternalUser : esClient.asCurrentUser;
-    return client.asyncSearch.delete({ id });
+    const params = {
+      ...(await getDefaultAsyncSubmitParams(uiSettingsClient, searchConfig, options)),
+      ...request.params,
+    };
+    return client.asyncSearch.submit(params, {
+      ...options.transport,
+      signal: options.abortSignal,
+      meta: true,
+    });
+  }
+
+  async function getAsyncSearch(
+    request: IEsSearchRequest<IAsyncSearchRequestParams>,
+    options: IAsyncSearchOptions,
+    deps: SearchStrategyDependencies
+  ) {
+    const params = {
+      id: request.id!,
+      ...getDefaultAsyncGetParams(searchConfig, options),
+      ...(request.params?.keep_alive ? { keep_alive: request.params.keep_alive } : {}),
+      ...(request.params?.wait_for_completion_timeout
+        ? { wait_for_completion_timeout: request.params.wait_for_completion_timeout }
+        : {}),
+    };
+    const statusResponse = await getAsyncSearchStatus(params, options, deps);
+    if (statusResponse.body.is_running) return statusResponse;
+    const client = useInternalUser ? deps.esClient.asInternalUser : deps.esClient.asCurrentUser;
+
+    return client.asyncSearch.get(params, {
+      ...options.transport,
+      signal: options.abortSignal,
+      meta: true,
+    });
+  }
+
+  function getAsyncSearchStatus(
+    request: IEsSearchRequest<IAsyncSearchRequestParams>,
+    options: IAsyncSearchOptions,
+    { esClient }: SearchStrategyDependencies
+  ) {
+    const client = useInternalUser ? esClient.asInternalUser : esClient.asCurrentUser;
+    return client.asyncSearch.status(
+      { id: request.id! },
+      { ...options.transport, signal: options.abortSignal, meta: true }
+    );
+  }
+
+  async function cancelAsyncSearch(
+    { id }: IEsSearchRequest<IAsyncSearchRequestParams>,
+    options: IAsyncSearchOptions,
+    { esClient }: SearchStrategyDependencies
+  ) {
+    if (!id || options.isStored) return;
+    const client = useInternalUser ? esClient.asInternalUser : esClient.asCurrentUser;
+    try {
+      await client.asyncSearch.delete({ id });
+    } catch (e) {
+      // A 404 means either this search request does not exist, or that it is already cancelled
+      if (e.meta?.statusCode === 404) return;
+
+      // Log all other (unexpected) error messages
+      logger.error(`cancelAsyncSearch error: ${e.message}`);
+    }
   }
 
   function asyncSearch(
     { id, ...request }: IEsSearchRequest<IAsyncSearchRequestParams>,
     options: IAsyncSearchOptions,
-    { esClient, uiSettingsClient }: SearchStrategyDependencies
+    deps: SearchStrategyDependencies
   ) {
-    const client = useInternalUser ? esClient.asInternalUser : esClient.asCurrentUser;
-
     const search = async () => {
-      const params = id
-        ? {
-            ...getDefaultAsyncGetParams(searchConfig, options),
-            ...(request.params?.keep_alive ? { keep_alive: request.params.keep_alive } : {}),
-            ...(request.params?.wait_for_completion_timeout
-              ? { wait_for_completion_timeout: request.params.wait_for_completion_timeout }
-              : {}),
-          }
-        : {
-            ...(await getDefaultAsyncSubmitParams(uiSettingsClient, searchConfig, options)),
-            ...request.params,
-          };
       const { body, headers, meta } = id
-        ? await client.asyncSearch.get(
-            { ...params, id },
-            { ...options.transport, signal: options.abortSignal, meta: true }
-          )
-        : await client.asyncSearch.submit(params, {
-            ...options.transport,
-            signal: options.abortSignal,
-            meta: true,
-          });
+        ? await getAsyncSearch({ id, ...request }, options, deps)
+        : await submitAsyncSearch(request, options, deps);
 
       const response = shimHitsTotal(body.response, options);
 
@@ -91,18 +136,7 @@ export const enhancedEsSearchStrategyProvider = (
       );
     };
 
-    const cancel = async () => {
-      if (!id || options.isStored) return;
-      try {
-        await cancelAsyncSearch(id, esClient);
-      } catch (e) {
-        // A 404 means either this search request does not exist, or that it is already cancelled
-        if (e.meta?.statusCode === 404) return;
-
-        // Log all other (unexpected) error messages
-        logger.error(`cancelAsyncSearch error: ${e.message}`);
-      }
-    };
+    const cancel = () => cancelAsyncSearch({ id }, options, deps);
 
     return pollSearch(search, cancel, {
       pollInterval: searchConfig.asyncSearch.pollInterval,
@@ -187,10 +221,10 @@ export const enhancedEsSearchStrategyProvider = (
      * @returns `Promise<void>`
      * @throws `KbnServerError`
      */
-    cancel: async (id, options, { esClient }) => {
+    cancel: async (id, options, deps) => {
       logger.debug(`cancel ${id}`);
       try {
-        await cancelAsyncSearch(id, esClient);
+        await cancelAsyncSearch({ id }, options, deps);
       } catch (e) {
         throw getKbnServerError(e);
       }

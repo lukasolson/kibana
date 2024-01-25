@@ -932,6 +932,16 @@ export class SearchSource {
     // });
     // Alternatively you could also add this query via "Edit as Query DSL", then it needs no code to be changed
 
+    // For testing slow queries, uncomment the following:
+    body.aggs = {
+      ...body.aggs,
+      FIVE_SECOND_DELAY: {
+        shard_delay: {
+          value: '2s',
+        },
+      },
+    };
+
     if (highlightAll && body.query) {
       body.highlight = getHighlightRequest(getConfig(UI_SETTINGS.DOC_HIGHLIGHT));
       delete searchRequest.highlightAll;

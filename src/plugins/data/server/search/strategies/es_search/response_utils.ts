@@ -50,6 +50,7 @@ export function shimHitsTotal(
   response: estypes.SearchResponse<unknown>,
   { legacyHitsTotal = true }: ISearchOptions = {}
 ) {
+  return response;
   if (!legacyHitsTotal) return response;
   const total = (response.hits?.total as any)?.value ?? response.hits?.total;
   const hits = { ...response.hits, total };
