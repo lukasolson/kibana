@@ -368,6 +368,10 @@ export class SearchSource {
       tap((response) => {
         // TODO: Remove casting when https://github.com/elastic/elasticsearch-js/issues/1287 is resolved
         if (!response || (response as unknown as { error: string }).error) {
+          console.log(
+            'src/plugins/data/common/search/search_source/search_source.ts:371',
+            response
+          );
           throw new RequestFailure(null, response);
         }
       }),
@@ -565,6 +569,10 @@ export class SearchSource {
                   );
                 },
                 error: (e) => {
+                  console.log(
+                    'src/plugins/data/common/search/search_source/search_source.ts:572',
+                    e
+                  );
                   obs.error(e);
                   sub.unsubscribe();
                 },
@@ -931,16 +939,6 @@ export class SearchSource {
     //   },
     // });
     // Alternatively you could also add this query via "Edit as Query DSL", then it needs no code to be changed
-
-    // For testing slow queries, uncomment the following:
-    body.aggs = {
-      ...body.aggs,
-      FIVE_SECOND_DELAY: {
-        shard_delay: {
-          value: '2s',
-        },
-      },
-    };
 
     if (highlightAll && body.query) {
       body.highlight = getHighlightRequest(getConfig(UI_SETTINGS.DOC_HIGHLIGHT));

@@ -300,6 +300,10 @@ export class SearchInterceptor {
           return result;
         })
         .catch((err) => {
+          console.log(
+            'src/plugins/data/public/search/search_interceptor/search_interceptor.ts:303',
+            err
+          );
           afterPoll({ isSearchStored: false });
           throw err;
         });
@@ -501,7 +505,11 @@ export class SearchInterceptor {
         // Abort the replay if the abortSignal is aborted.
         // The underlaying search will not abort unless searchAbortController fires.
         const aborted$ = (abortSignal ? fromEvent(abortSignal, 'abort') : EMPTY).pipe(
-          map(() => {
+          map((e) => {
+            console.log(
+              'src/plugins/data/public/search/search_interceptor/search_interceptor.ts:509',
+              e
+            );
             throw new AbortError();
           })
         );
@@ -509,6 +517,10 @@ export class SearchInterceptor {
         return response$.pipe(
           takeUntil(aborted$),
           catchError((e) => {
+            console.log(
+              'src/plugins/data/public/search/search_interceptor/search_interceptor.ts:520',
+              e
+            );
             return throwError(
               this.handleSearchError(
                 e,

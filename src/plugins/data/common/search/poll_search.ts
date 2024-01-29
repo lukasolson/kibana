@@ -17,6 +17,8 @@ export const pollSearch = <Response extends IKibanaSearchResponse>(
   cancel?: () => void,
   { pollInterval, abortSignal }: IAsyncSearchOptions = {}
 ): Observable<Response> => {
+  let lastResponse: Response | null = null;
+
   const getPollInterval = (elapsedTime: number): number => {
     if (typeof pollInterval === 'number') return pollInterval;
     else {
@@ -46,7 +48,8 @@ export const pollSearch = <Response extends IKibanaSearchResponse>(
     }
 
     const aborted$ = (abortSignal ? fromEvent(abortSignal, 'abort') : EMPTY).pipe(
-      map(() => {
+      map((e) => {
+        console.log('src/plugins/data/common/search/poll_search.ts:50', e, lastResponse);
         throw new AbortError();
       })
     );
@@ -58,8 +61,10 @@ export const pollSearch = <Response extends IKibanaSearchResponse>(
       }),
       tap((response) => {
         if (isAbortResponse(response)) {
+          console.log('src/plugins/data/common/search/poll_search.ts:64', response, lastResponse);
           throw new AbortError();
         }
+        lastResponse = response;
       }),
       takeWhile<Response>(isRunningResponse, true),
       takeUntil<Response>(aborted$)

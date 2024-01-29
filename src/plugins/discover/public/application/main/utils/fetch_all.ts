@@ -154,6 +154,7 @@ export function fetchAll(
       })
       // In the case that the request was aborted (e.g. a refresh), swallow the abort error
       .catch((e) => {
+        console.log('src/plugins/discover/public/application/main/utils/fetch_all.ts:157', e);
         if (!abortController.signal.aborted) throw e;
       })
       // Only the document query should send its errors to main$, to cause the full Discover app

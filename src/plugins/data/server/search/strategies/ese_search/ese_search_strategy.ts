@@ -75,8 +75,8 @@ export const enhancedEsSearchStrategyProvider = (
         ? { wait_for_completion_timeout: request.params.wait_for_completion_timeout }
         : {}),
     };
-    const statusResponse = await getAsyncSearchStatus(params, options, deps);
-    if (statusResponse.body.is_running) return statusResponse;
+    // const statusResponse = await getAsyncSearchStatus(params, options, deps);
+    // if (statusResponse.body.is_running) return statusResponse;
     const client = useInternalUser ? deps.esClient.asInternalUser : deps.esClient.asCurrentUser;
 
     return client.asyncSearch.get(params, {
