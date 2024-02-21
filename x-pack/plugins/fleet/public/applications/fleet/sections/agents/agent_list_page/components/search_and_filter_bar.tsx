@@ -21,7 +21,8 @@ import { useIsFirstTimeAgentUserQuery } from '../../../../../integrations/sectio
 import type { Agent, AgentPolicy } from '../../../../types';
 import { SearchBar } from '../../../../components';
 import { AGENTS_INDEX, AGENTS_PREFIX } from '../../../../constants';
-import { useFleetServerStandalone } from '../../../../hooks';
+
+import { useStartServices } from '../../../../hooks';
 
 import { AgentBulkActions } from './bulk_actions';
 import type { SelectionMode } from './types';
@@ -49,6 +50,7 @@ export interface SearchAndFilterBarProps {
   inactiveShownAgents: number;
   totalInactiveAgents: number;
   totalManagedAgentIds: string[];
+  inactiveManagedAgentIds: string[];
   selectionMode: SelectionMode;
   currentQuery: string;
   selectedAgents: Agent[];
@@ -78,6 +80,7 @@ export const SearchAndFilterBar: React.FunctionComponent<SearchAndFilterBarProps
   inactiveShownAgents,
   totalInactiveAgents,
   totalManagedAgentIds,
+  inactiveManagedAgentIds,
   selectionMode,
   currentQuery,
   selectedAgents,
@@ -88,10 +91,9 @@ export const SearchAndFilterBar: React.FunctionComponent<SearchAndFilterBarProps
   onClickAgentActivity,
   showAgentActivityTour,
 }) => {
-  const { isFleetServerStandalone } = useFleetServerStandalone();
   const { isFirstTimeAgentUser, isLoading: isFirstTimeAgentUserLoading } =
     useIsFirstTimeAgentUserQuery();
-  const showAddFleetServerBtn = !isFleetServerStandalone;
+  const { cloud } = useStartServices();
 
   return (
     <>
@@ -108,7 +110,7 @@ export const SearchAndFilterBar: React.FunctionComponent<SearchAndFilterBarProps
                 showAgentActivityTour={showAgentActivityTour}
               />
             </EuiFlexItem>
-            {showAddFleetServerBtn && (
+            {!cloud?.isServerlessEnabled && (
               <EuiFlexItem grow={false}>
                 <EuiToolTip
                   content={
@@ -202,6 +204,7 @@ export const SearchAndFilterBar: React.FunctionComponent<SearchAndFilterBarProps
                   shownAgents={shownAgents}
                   inactiveShownAgents={inactiveShownAgents}
                   totalManagedAgentIds={totalManagedAgentIds}
+                  inactiveManagedAgentIds={inactiveManagedAgentIds}
                   selectionMode={selectionMode}
                   currentQuery={currentQuery}
                   selectedAgents={selectedAgents}

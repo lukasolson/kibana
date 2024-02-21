@@ -5,14 +5,12 @@
  * 2.0.
  */
 
-import { EuiHeaderLink, EuiHeaderLinks } from '@elastic/eui';
+import { EuiFlexGroup, EuiFlexItem, EuiHeaderLink, EuiHeaderLinks } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
 import React from 'react';
-
-import { useKibana } from '../../../../utils/kibana_react';
 import { usePluginContext } from '../../../../hooks/use_plugin_context';
+import { useKibana } from '../../../../utils/kibana_react';
 import HeaderMenuPortal from './header_menu_portal';
-const SLO_FEEDBACK_LINK = 'https://ela.st/slo-feedback';
 
 export function HeaderMenu(): React.ReactElement | null {
   const {
@@ -27,30 +25,26 @@ export function HeaderMenu(): React.ReactElement | null {
 
   return (
     <HeaderMenuPortal setHeaderActionMenu={setHeaderActionMenu} theme$={theme.theme$}>
-      <EuiHeaderLinks>
-        <EuiHeaderLink
-          data-test-subj="sloFeedbackButton"
-          color="warning"
-          href={SLO_FEEDBACK_LINK}
-          iconType="popout"
-        >
-          {i18n.translate('xpack.observability.slo.giveFeedback', {
-            defaultMessage: 'Give feedback',
-          })}
-        </EuiHeaderLink>
-        <EuiHeaderLink
-          color="primary"
-          href={http.basePath.prepend('/app/integrations/browse')}
-          iconType="indexOpen"
-        >
-          {addDataLinkText}
-        </EuiHeaderLink>
-        {ObservabilityAIAssistantActionMenuItem ? <ObservabilityAIAssistantActionMenuItem /> : null}
-      </EuiHeaderLinks>
+      <EuiFlexGroup responsive={false} gutterSize="s">
+        {ObservabilityAIAssistantActionMenuItem ? (
+          <EuiFlexItem>
+            <ObservabilityAIAssistantActionMenuItem />
+          </EuiFlexItem>
+        ) : null}
+        <EuiFlexItem>
+          <EuiHeaderLinks>
+            <EuiHeaderLink
+              color="primary"
+              href={http.basePath.prepend('/app/integrations/browse')}
+              iconType="indexOpen"
+            >
+              {i18n.translate('xpack.observability.home.addData', {
+                defaultMessage: 'Add integrations',
+              })}
+            </EuiHeaderLink>
+          </EuiHeaderLinks>
+        </EuiFlexItem>
+      </EuiFlexGroup>
     </HeaderMenuPortal>
   );
 }
-
-const addDataLinkText = i18n.translate('xpack.observability.home.addData', {
-  defaultMessage: 'Add integrations',
-});

@@ -16,12 +16,13 @@ import { KPIGrid } from './kpis/kpi_grid';
 import { MetricsSection, MetricsSectionCompact } from './metrics/metrics_section';
 import { useAssetDetailsRenderPropsContext } from '../../hooks/use_asset_details_render_props';
 import { useMetadataStateContext } from '../../hooks/use_metadata_state';
-import { useDataViewsProviderContext } from '../../hooks/use_data_views';
+import { useDataViewsContext } from '../../hooks/use_data_views';
 import { useDatePickerContext } from '../../hooks/use_date_picker';
 import { SectionSeparator } from './section_separator';
 import { MetadataErrorCallout } from '../../components/metadata_error_callout';
 import { useIntersectingState } from '../../hooks/use_intersecting_state';
 import { CpuProfilingPrompt } from './kpis/cpu_profiling_prompt';
+import { ServicesContent } from './services';
 
 export const Overview = () => {
   const ref = useRef<HTMLDivElement>(null);
@@ -32,8 +33,7 @@ export const Overview = () => {
     loading: metadataLoading,
     error: fetchMetadataError,
   } = useMetadataStateContext();
-
-  const { logs, metrics } = useDataViewsProviderContext();
+  const { logs, metrics } = useDataViewsContext();
 
   const isFullPageView = renderMode.mode !== 'flyout';
 
@@ -78,6 +78,12 @@ export const Overview = () => {
         />
         <SectionSeparator />
       </EuiFlexItem>
+      {asset.type === 'host' ? (
+        <EuiFlexItem grow={false}>
+          <ServicesContent hostName={asset.name} dateRange={state.dateRange} />
+          <SectionSeparator />
+        </EuiFlexItem>
+      ) : null}
       <EuiFlexItem grow={false}>{metricsSection}</EuiFlexItem>
     </EuiFlexGroup>
   );

@@ -8,23 +8,16 @@
 import { EuiSelectableOption } from '@elastic/eui';
 import { EuiSelectableOptionCheckedType } from '@elastic/eui/src/components/selectable/selectable_option';
 import { i18n } from '@kbn/i18n';
-import React from 'react';
-import { Filter } from '@kbn/es-query';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
+import { Query } from '@kbn/es-query';
+import { useSloCrudLoading } from '../hooks/use_crud_loading';
 import { useKibana } from '../../../utils/kibana_react';
-import { ObservabilityPublicPluginsStart } from '../../..';
-import { SortBySelect } from './common/sort_by_select';
 import { SLO_SUMMARY_DESTINATION_INDEX_NAME } from '../../../../common/slo/constants';
 import { useCreateDataView } from '../../../hooks/use_create_data_view';
-import { SearchState } from '../hooks/use_url_search_state';
-
-export interface Props {
-  query?: string;
-  filters?: Filter[];
-  loading: boolean;
-  initialState: SearchState;
-  onStateChange: (newState: Partial<SearchState>) => void;
-}
+import { observabilityAppId, ObservabilityPublicPluginsStart } from '../../..';
+import { useUrlSearchState } from '../hooks/use_url_search_state';
+import { QuickFilters } from './common/quick_filters';
 
 export type SortField = 'sli_value' | 'error_budget_consumed' | 'error_budget_remaining' | 'status';
 export type SortDirection = 'asc' | 'desc';
@@ -37,45 +30,63 @@ export type Item<T> = EuiSelectableOption & {
 
 export type ViewMode = 'default' | 'compact';
 
-export function SloListSearchBar({ query, filters, loading, initialState, onStateChange }: Props) {
-  const { dataView } = useCreateDataView({
-    indexPatternString: SLO_SUMMARY_DESTINATION_INDEX_NAME,
-  });
-
+export function SloListSearchBar() {
   const {
+    data: { query },
     unifiedSearch: {
       ui: { SearchBar },
     },
   } = useKibana<ObservabilityPublicPluginsStart>().services;
 
+  const { state, onStateChange } = useUrlSearchState();
+  const loading = useSloCrudLoading();
+
+  const { dataView } = useCreateDataView({
+    indexPatternString: SLO_SUMMARY_DESTINATION_INDEX_NAME,
+  });
+
+  useEffect(() => {
+    const sub = query.state$.subscribe(() => {
+      const queryState = query.getState();
+      onStateChange({
+        kqlQuery: String((queryState.query as Query).query),
+        filters: queryState.filters,
+      });
+    });
+
+    return () => sub.unsubscribe();
+  }, [onStateChange, query]);
+
   return (
     <Container>
       <SearchBar
-        appName="observability"
-        placeholder={i18n.translate('xpack.observability.slo.list.search', {
-          defaultMessage: 'Search your SLOs...',
-        })}
+        appName={observabilityAppId}
+        placeholder={PLACEHOLDER}
         indexPatterns={dataView ? [dataView] : []}
         isDisabled={loading}
         renderQueryInputAppend={() => (
-          <SortBySelect
-            initialState={initialState}
-            loading={loading}
-            onStateChange={onStateChange}
-          />
+          <QuickFilters initialState={state} loading={loading} onStateChange={onStateChange} />
         )}
-        filters={filters}
+        filters={state.filters}
         onFiltersUpdated={(newFilters) => {
           onStateChange({ filters: newFilters });
         }}
         onQuerySubmit={({ query: value }) => {
           onStateChange({ kqlQuery: String(value?.query), lastRefresh: Date.now() });
         }}
-        query={{ query: String(query), language: 'kuery' }}
+        query={{ query: String(state.kqlQuery), language: 'kuery' }}
         showSubmitButton={true}
         showDatePicker={false}
         showQueryInput={true}
         disableQueryLanguageSwitcher={true}
+        saveQueryMenuVisibility="globally_managed"
+        onClearSavedQuery={() => {}}
+        onSavedQueryUpdated={(savedQuery) => {
+          onStateChange({
+            filters: savedQuery.attributes.filters,
+            kqlQuery: String(savedQuery.attributes.query.query),
+          });
+        }}
       />
     </Container>
   );
@@ -86,3 +97,7 @@ const Container = styled.div`
     padding: 0;
   }
 `;
+
+const PLACEHOLDER = i18n.translate('xpack.observability.slo.list.search', {
+  defaultMessage: 'Search your SLOs ...',
+});

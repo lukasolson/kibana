@@ -5,8 +5,8 @@
  * 2.0.
  */
 
-import expect from '@kbn/expect';
 import { asyncForEach } from '@kbn/std';
+import expect from '@kbn/expect';
 import type { FtrProviderContext } from '../ftr_provider_context';
 import { vulnerabilitiesLatestMock } from '../mocks/vulnerabilities_latest_mock';
 
@@ -18,6 +18,12 @@ export default function ({ getPageObjects, getService }: FtrProviderContext) {
 
   const resourceName1 = 'name-ng-1-Node';
   const resourceName2 = 'othername-june12-8-8-0-1';
+
+  const cloudAccountName1 = 'elastic-security-cloud-security-dev';
+  const cloudAccountName2 = 'elastic-security-cloud-security-gcp';
+
+  const cloudProviderName1 = 'Amazon Web Services';
+  const cloudProviderName2 = 'Google Cloud Platform';
 
   describe('Vulnerabilities Page - Grouping', function () {
     this.tags(['cloud_security_posture_findings_grouping']);
@@ -38,18 +44,97 @@ export default function ({ getPageObjects, getService }: FtrProviderContext) {
     });
 
     after(async () => {
-      const groupSelector = await findings.groupSelector();
-      await groupSelector.openDropDown();
-      await groupSelector.setValue('None');
       await findings.vulnerabilitiesIndex.remove();
     });
 
     describe('Default Grouping', async () => {
-      it('groups vulnerabilities by resource and sort by compliance score desc', async () => {
-        const groupSelector = await findings.groupSelector();
+      it('groups vulnerabilities by cloud account and sort by number of vulnerabilities desc', async () => {
+        const groupSelector = findings.groupSelector();
+        await groupSelector.openDropDown();
+        await groupSelector.setValue('Cloud account');
+
+        const grouping = await findings.findingsGrouping();
+
+        const order = [
+          {
+            cloudAccountName: cloudAccountName1,
+            cloudProviderName: cloudProviderName1,
+            findingsCount: '1',
+          },
+          {
+            cloudAccountName: cloudAccountName2,
+            cloudProviderName: cloudProviderName2,
+            findingsCount: '1',
+          },
+        ];
+
+        await asyncForEach(
+          order,
+          async ({ cloudAccountName, cloudProviderName, findingsCount }, index) => {
+            const groupRow = await grouping.getRowAtIndex(index);
+            expect(await groupRow.getVisibleText()).to.contain(cloudAccountName);
+            expect(await groupRow.getVisibleText()).to.contain(cloudProviderName);
+
+            expect(
+              await (
+                await groupRow.findByTestSubject('vulnerabilities_grouping_counter')
+              ).getVisibleText()
+            ).to.be(findingsCount);
+          }
+        );
+
+        const groupCount = await grouping.getGroupCount();
+        expect(groupCount).to.be('2 groups');
+
+        const unitCount = await grouping.getUnitCount();
+        expect(unitCount).to.be('2 vulnerabilities');
+      });
+      it('groups vulnerabilities by CVE and sort by number of vulnerabilities desc', async () => {
+        const groupSelector = findings.groupSelector();
+        await groupSelector.openDropDown();
+        await groupSelector.setValue('None');
+        await groupSelector.openDropDown();
+        await groupSelector.setValue('CVE');
+
+        const grouping = await findings.findingsGrouping();
+
+        const order = [
+          {
+            name: vulnerabilitiesLatestMock[0].vulnerability.id,
+            description: vulnerabilitiesLatestMock[0].vulnerability.description,
+            findingsCount: '1',
+          },
+          {
+            name: vulnerabilitiesLatestMock[1].vulnerability.id,
+            description: vulnerabilitiesLatestMock[1].vulnerability.description,
+            findingsCount: '1',
+          },
+        ];
+
+        await asyncForEach(order, async ({ name, description, findingsCount }, index) => {
+          const groupRow = await grouping.getRowAtIndex(index);
+          expect(await groupRow.getVisibleText()).to.contain(name);
+          expect(await groupRow.getVisibleText()).to.contain(description);
+
+          expect(
+            await (
+              await groupRow.findByTestSubject('vulnerabilities_grouping_counter')
+            ).getVisibleText()
+          ).to.be(findingsCount);
+        });
+
+        const groupCount = await grouping.getGroupCount();
+        expect(groupCount).to.be('2 groups');
+
+        const unitCount = await grouping.getUnitCount();
+        expect(unitCount).to.be('2 vulnerabilities');
+      });
+      it('groups vulnerabilities by resource and sort by number of vulnerabilities desc', async () => {
+        const groupSelector = findings.groupSelector();
+        await groupSelector.openDropDown();
+        await groupSelector.setValue('None');
         await groupSelector.openDropDown();
         await groupSelector.setValue('Resource');
-
         const grouping = await findings.findingsGrouping();
 
         const resourceOrder = [
@@ -88,7 +173,14 @@ export default function ({ getPageObjects, getService }: FtrProviderContext) {
     });
     describe('SearchBar', () => {
       it('add filter', async () => {
+        const groupSelector = await findings.groupSelector();
+        await groupSelector.openDropDown();
+        await groupSelector.setValue('None');
+        await groupSelector.openDropDown();
+        await groupSelector.setValue('Resource');
+
         // Filter bar uses the field's customLabel in the DataView
+
         await filterBar.addFilter({
           field: 'Resource Name',
           operation: 'is',

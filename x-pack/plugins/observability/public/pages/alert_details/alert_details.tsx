@@ -20,6 +20,7 @@ import {
 import { RuleTypeModel } from '@kbn/triggers-actions-ui-plugin/public';
 import { useBreadcrumbs } from '@kbn/observability-shared-plugin/public';
 
+import dedent from 'dedent';
 import { useKibana } from '../../utils/kibana_react';
 import { useFetchRule } from '../../hooks/use_fetch_rule';
 import { usePluginContext } from '../../hooks/use_plugin_context';
@@ -56,27 +57,63 @@ export function AlertDetails() {
     },
     http,
     triggersActionsUi: { ruleTypeRegistry },
+    observabilityAIAssistant: {
+      service: { setScreenContext },
+    },
     uiSettings,
   } = useKibana().services;
 
   const { ObservabilityPageTemplate, config } = usePluginContext();
   const { alertId } = useParams<AlertDetailsPathParams>();
-  const [isLoading, alert] = useFetchAlertDetail(alertId);
+  const [isLoading, alertDetail] = useFetchAlertDetail(alertId);
   const [ruleTypeModel, setRuleTypeModel] = useState<RuleTypeModel | null>(null);
   const CasesContext = getCasesContext();
   const userCasesPermissions = canUseCases([observabilityFeatureId]);
   const { rule } = useFetchRule({
-    ruleId: alert?.fields[ALERT_RULE_UUID],
+    ruleId: alertDetail?.formatted.fields[ALERT_RULE_UUID],
   });
   const [summaryFields, setSummaryFields] = useState<AlertSummaryField[]>();
   const [alertStatus, setAlertStatus] = useState<AlertStatus>();
 
   useEffect(() => {
-    if (alert) {
-      setRuleTypeModel(ruleTypeRegistry.get(alert?.fields[ALERT_RULE_TYPE_ID]!));
-      setAlertStatus(alert?.fields[ALERT_STATUS] as AlertStatus);
+    if (!alertDetail) {
+      return;
     }
-  }, [alert, ruleTypeRegistry]);
+
+    const screenDescription = dedent(`The user is looking at an ${
+      alertDetail.formatted.active ? 'active' : 'recovered'
+    } alert.
+    It started at ${new Date(
+      alertDetail.formatted.start
+    ).toISOString()}, and was last updated at ${new Date(
+      alertDetail.formatted.lastUpdated
+    ).toISOString()}.
+
+    ${
+      alertDetail.formatted.reason
+        ? `The reason given for the alert is ${alertDetail.formatted.reason}.`
+        : ''
+    }
+    `);
+
+    return setScreenContext({
+      screenDescription,
+      data: [
+        {
+          name: 'alert_fields',
+          description: 'The fields and values for the alert',
+          value: alertDetail.formatted.fields,
+        },
+      ],
+    });
+  }, [setScreenContext, alertDetail]);
+
+  useEffect(() => {
+    if (alertDetail) {
+      setRuleTypeModel(ruleTypeRegistry.get(alertDetail?.formatted.fields[ALERT_RULE_TYPE_ID]!));
+      setAlertStatus(alertDetail?.formatted?.fields[ALERT_STATUS] as AlertStatus);
+    }
+  }, [alertDetail, ruleTypeRegistry]);
   useBreadcrumbs([
     {
       href: http.basePath.prepend(paths.observability.alerts),
@@ -86,7 +123,9 @@ export function AlertDetails() {
       deepLinkId: 'observability-overview:alerts',
     },
     {
-      text: alert ? pageTitleContent(alert.fields[ALERT_RULE_CATEGORY]) : defaultBreadcrumb,
+      text: alertDetail
+        ? pageTitleContent(alertDetail.formatted.fields[ALERT_RULE_CATEGORY])
+        : defaultBreadcrumb,
     },
   ]);
 
@@ -99,11 +138,11 @@ export function AlertDetails() {
   }
 
   // Redirect to the 404 page when the user hit the page url directly in the browser while the feature flag is off.
-  if (alert && !isAlertDetailsEnabledPerApp(alert, config)) {
+  if (alertDetail && !isAlertDetailsEnabledPerApp(alertDetail.formatted, config)) {
     return <PageNotFound />;
   }
 
-  if (!isLoading && !alert)
+  if (!isLoading && !alertDetail)
     return (
       <EuiPanel data-test-subj="alertDetailsError">
         <EuiEmptyPrompt
@@ -134,7 +173,7 @@ export function AlertDetails() {
       pageHeader={{
         pageTitle: (
           <PageTitle
-            alert={alert}
+            alert={alertDetail?.formatted ?? null}
             alertStatus={alertStatus}
             dataTestSubj={rule?.ruleTypeId || 'alertDetailsPageTitle'}
           />
@@ -146,7 +185,7 @@ export function AlertDetails() {
             features={{ alerts: { sync: false } }}
           >
             <HeaderActions
-              alert={alert}
+              alert={alertDetail?.formatted ?? null}
               alertStatus={alertStatus}
               onUntrackAlert={onUntrackAlert}
             />
@@ -159,9 +198,9 @@ export function AlertDetails() {
       <HeaderMenu />
       <AlertSummary alertSummaryFields={summaryFields} />
       <EuiSpacer size="l" />
-      {AlertDetailsAppSection && rule && (
+      {AlertDetailsAppSection && rule && alertDetail?.formatted && (
         <AlertDetailsAppSection
-          alert={alert}
+          alert={alertDetail.formatted}
           rule={rule}
           timeZone={timeZone}
           setAlertSummaryFields={setSummaryFields}

@@ -6,8 +6,9 @@
  * Side Public License, v 1.
  */
 
-import React, { useState } from 'react';
+import React, { useReducer, useEffect } from 'react';
 import classNames from 'classnames';
+import useObservable from 'react-use/lib/useObservable';
 import {
   EuiButton,
   EuiFocusTrap,
@@ -24,8 +25,13 @@ import {
   EmbeddableConsoleDependencies,
 } from '../../../types/embeddable_console';
 
+import * as store from '../../stores/embeddable_console';
+import { setLoadFromParameter, removeLoadFromParameter } from '../../lib/load_from';
+
 import { ConsoleWrapper } from './console_wrapper';
 import './_index.scss';
+
+const KBN_BODY_CONSOLE_CLASS = 'kbnBody--hasEmbeddableConsole';
 
 const landmarkHeading = i18n.translate('console.embeddableConsole.landmarkHeading', {
   defaultMessage: 'Developer console',
@@ -35,8 +41,34 @@ export const EmbeddableConsole = ({
   size = 'm',
   core,
   usageCollection,
+  setDispatch,
 }: EmbeddableConsoleProps & EmbeddableConsoleDependencies) => {
-  const [isConsoleOpen, setIsConsoleOpen] = useState<boolean>(false);
+  const [consoleState, consoleDispatch] = useReducer(
+    store.reducer,
+    store.initialValue,
+    (value) => ({ ...value })
+  );
+  const chromeStyle = useObservable(core.chrome.getChromeStyle$());
+  useEffect(() => {
+    setDispatch(consoleDispatch);
+    return () => setDispatch(null);
+  }, [setDispatch, consoleDispatch]);
+  useEffect(() => {
+    if (consoleState.isOpen && consoleState.loadFromContent) {
+      setLoadFromParameter(consoleState.loadFromContent);
+    } else if (!consoleState.isOpen) {
+      removeLoadFromParameter();
+    }
+  }, [consoleState.isOpen, consoleState.loadFromContent]);
+  useEffect(() => {
+    document.body.classList.add(KBN_BODY_CONSOLE_CLASS);
+    return () => document.body.classList.remove(KBN_BODY_CONSOLE_CLASS);
+  }, []);
+
+  const isConsoleOpen = consoleState.isOpen;
+  const setIsConsoleOpen = (value: boolean) => {
+    consoleDispatch(value ? { type: 'open' } : { type: 'close' });
+  };
   const toggleConsole = () => setIsConsoleOpen(!isConsoleOpen);
 
   const onKeyDown = (event: any) => {
@@ -52,6 +84,9 @@ export const EmbeddableConsole = ({
     'embeddableConsole--large': size === 'l',
     'embeddableConsole--medium': size === 'm',
     'embeddableConsole--small': size === 's',
+    'embeddableConsole--classicChrome': chromeStyle === 'classic',
+    'embeddableConsole--projectChrome': chromeStyle === 'project',
+    'embeddableConsole--unknownChrome': chromeStyle === undefined,
     'embeddableConsole--fixed': true,
     'embeddableConsole--showOnMobile': false,
   });

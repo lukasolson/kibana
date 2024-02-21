@@ -6,13 +6,11 @@
  */
 import React, { useState } from 'react';
 import {
-  EuiComboBox,
   EuiFieldSearch,
   EuiFlexItem,
   EuiText,
   EuiSpacer,
   EuiFlexGroup,
-  type EuiComboBoxOptionOption,
   EuiPopover,
   EuiButtonEmpty,
   EuiContextMenuItem,
@@ -26,8 +24,13 @@ import { i18n } from '@kbn/i18n';
 import { FormattedMessage } from '@kbn/i18n-react';
 import { css } from '@emotion/react';
 import { euiThemeVars } from '@kbn/ui-theme';
+import { useKibana } from '../../common/hooks/use_kibana';
+import { getFindingsDetectionRuleSearchTagsFromArrayOfRules } from '../../../common/utils/detection_rules';
 import { RuleStateAttributesWithoutStates, useChangeCspRuleState } from './change_csp_rule_state';
 import { CspBenchmarkRulesWithStates } from './rules_container';
+import { MultiSelectFilter } from '../../common/component/multi_select_filter';
+import { showChangeBenchmarkRuleStatesSuccessToast } from '../../components/take_action';
+import { useFetchDetectionRulesByTags } from '../../common/api/use_fetch_detection_rules_by_tags';
 
 export const RULES_BULK_ACTION_BUTTON = 'bulk-action-button';
 export const RULES_BULK_ACTION_OPTION_ENABLE = 'bulk-action-option-enable';
@@ -36,11 +39,13 @@ export const RULES_SELECT_ALL_RULES = 'select-all-rules-button';
 export const RULES_CLEAR_ALL_RULES_SELECTION = 'clear-rules-selection-button';
 export const RULES_DISABLED_FILTER = 'rules-disabled-filter';
 export const RULES_ENABLED_FILTER = 'rules-enabled-filter';
+export const CIS_SECTION_FILTER = 'cis-section-filter';
+export const RULE_NUMBER_FILTER = 'rule-number-filter';
 
 interface RulesTableToolbarProps {
   search: (value: string) => void;
-  onSectionChange: (value: string | undefined) => void;
-  onRuleNumberChange: (value: string | undefined) => void;
+  onSectionChange: (value: string[] | undefined) => void;
+  onRuleNumberChange: (value: string[] | undefined) => void;
   sectionSelectOptions: string[];
   ruleNumberSelectOptions: string[];
   totalRulesCount: number;
@@ -50,7 +55,7 @@ interface RulesTableToolbarProps {
   selectedRules: CspBenchmarkRulesWithStates[];
   refetchRulesStates: () => void;
   setEnabledDisabledItemsFilter: (filterState: string) => void;
-  currentEnabledDisabledItemsFilterState: string;
+  enabledDisabledItemsFilterState: string;
   setSelectAllRules: () => void;
   setSelectedRules: (rules: CspBenchmarkRulesWithStates[]) => void;
 }
@@ -77,40 +82,28 @@ export const RulesTableHeader = ({
   selectedRules,
   refetchRulesStates,
   setEnabledDisabledItemsFilter,
-  currentEnabledDisabledItemsFilterState,
+  enabledDisabledItemsFilterState,
   setSelectAllRules,
   setSelectedRules,
 }: RulesTableToolbarProps) => {
-  const [selectedSection, setSelectedSection] = useState<EuiComboBoxOptionOption[]>([]);
-  const [selectedRuleNumber, setSelectedRuleNumber] = useState<EuiComboBoxOptionOption[]>([]);
+  const [selectedSection, setSelectedSection] = useState<string[]>([]);
+  const [selectedRuleNumber, setSelectedRuleNumber] = useState<string[]>([]);
   const sectionOptions = sectionSelectOptions.map((option) => ({
+    key: option,
     label: option,
   }));
-
   const ruleNumberOptions = ruleNumberSelectOptions.map((option) => ({
+    key: option,
     label: option,
   }));
-
-  const [isEnabledRulesFilterOn, setIsEnabledRulesFilterOn] = useState(false);
-  const [isDisabledRulesFilterOn, setisDisabledRulesFilterOn] = useState(false);
 
   const toggleEnabledRulesFilter = () => {
-    setIsEnabledRulesFilterOn(!isEnabledRulesFilterOn);
-    setisDisabledRulesFilterOn(
-      isDisabledRulesFilterOn && !isEnabledRulesFilterOn ? false : isDisabledRulesFilterOn
-    );
-    if (currentEnabledDisabledItemsFilterState === 'enabled')
-      setEnabledDisabledItemsFilter('no-filter');
+    if (enabledDisabledItemsFilterState === 'enabled') setEnabledDisabledItemsFilter('no-filter');
     else setEnabledDisabledItemsFilter('enabled');
   };
 
   const toggleDisabledRulesFilter = () => {
-    setisDisabledRulesFilterOn(!isDisabledRulesFilterOn);
-    setIsEnabledRulesFilterOn(
-      isEnabledRulesFilterOn && !isDisabledRulesFilterOn ? false : isEnabledRulesFilterOn
-    );
-    if (currentEnabledDisabledItemsFilterState === 'disabled')
-      setEnabledDisabledItemsFilter('no-filter');
+    if (enabledDisabledItemsFilterState === 'disabled') setEnabledDisabledItemsFilter('no-filter');
     else setEnabledDisabledItemsFilter('disabled');
   };
 
@@ -130,27 +123,28 @@ export const RulesTableHeader = ({
         />
       </EuiFlexItem>
       <EuiFlexItem grow={0}>
-        <EuiFlexGroup gutterSize="none" direction="row">
+        <EuiFlexGroup gutterSize="s" direction="row">
           <EuiFlexItem
             css={css`
               min-width: 160px;
             `}
           >
-            <EuiComboBox
-              fullWidth={true}
-              placeholder={i18n.translate(
+            <MultiSelectFilter
+              buttonLabel={i18n.translate(
                 'xpack.csp.rules.rulesTableHeader.sectionSelectPlaceholder',
                 {
                   defaultMessage: 'CIS Section',
                 }
               )}
-              singleSelection={{ asPlainText: true }}
-              options={sectionOptions}
-              selectedOptions={selectedSection}
-              onChange={(option) => {
-                setSelectedSection(option);
-                onSectionChange(option.length ? option[0].label : undefined);
+              id={'cis-section-multi-select-filter'}
+              onChange={(section) => {
+                setSelectedSection([...section?.selectedOptionKeys]);
+                onSectionChange(
+                  section?.selectedOptionKeys ? section?.selectedOptionKeys : undefined
+                );
               }}
+              options={sectionOptions}
+              selectedOptionKeys={selectedSection}
             />
           </EuiFlexItem>
           <EuiFlexItem
@@ -158,21 +152,22 @@ export const RulesTableHeader = ({
               min-width: 160px;
             `}
           >
-            <EuiComboBox
-              fullWidth={true}
-              placeholder={i18n.translate(
+            <MultiSelectFilter
+              buttonLabel={i18n.translate(
                 'xpack.csp.rules.rulesTableHeader.ruleNumberSelectPlaceholder',
                 {
                   defaultMessage: 'Rule Number',
                 }
               )}
-              singleSelection={{ asPlainText: true }}
-              options={ruleNumberOptions}
-              selectedOptions={selectedRuleNumber}
-              onChange={(option) => {
-                setSelectedRuleNumber(option);
-                onRuleNumberChange(option.length ? option[0].label : undefined);
+              id={'rule-number-multi-select-filter'}
+              onChange={(ruleNumber) => {
+                setSelectedRuleNumber([...ruleNumber?.selectedOptionKeys]);
+                onRuleNumberChange(
+                  ruleNumber?.selectedOptionKeys ? ruleNumber?.selectedOptionKeys : undefined
+                );
               }}
+              options={ruleNumberOptions}
+              selectedOptionKeys={selectedRuleNumber}
             />
           </EuiFlexItem>
           <EuiFlexItem
@@ -183,7 +178,7 @@ export const RulesTableHeader = ({
             <EuiFilterGroup>
               <EuiFilterButton
                 withNext
-                hasActiveFilters={isEnabledRulesFilterOn}
+                hasActiveFilters={enabledDisabledItemsFilterState === 'enabled'}
                 onClick={toggleEnabledRulesFilter}
                 data-test-subj={RULES_ENABLED_FILTER}
               >
@@ -193,7 +188,7 @@ export const RulesTableHeader = ({
                 />
               </EuiFilterButton>
               <EuiFilterButton
-                hasActiveFilters={isDisabledRulesFilterOn}
+                hasActiveFilters={enabledDisabledItemsFilterState === 'disabled'}
                 onClick={toggleDisabledRulesFilter}
                 data-test-subj={RULES_DISABLED_FILTER}
               >
@@ -277,6 +272,13 @@ const CurrentPageOfTotal = ({
     setIsPopoverOpen((e) => !e);
   };
 
+  const { data: rulesData } = useFetchDetectionRulesByTags(
+    getFindingsDetectionRuleSearchTagsFromArrayOfRules(selectedRules.map((rule) => rule.metadata)),
+    { match: 'any' }
+  );
+
+  const { notifications } = useKibana().services;
+
   const postRequestChangeRulesState = useChangeCspRuleState();
   const changeRulesState = async (state: 'mute' | 'unmute') => {
     const bulkSelectedRules: RuleStateAttributesWithoutStates[] = selectedRules.map(
@@ -292,6 +294,10 @@ const CurrentPageOfTotal = ({
       await postRequestChangeRulesState(state, bulkSelectedRules);
       await refetchRulesStates();
       await setIsPopoverOpen(false);
+      await showChangeBenchmarkRuleStatesSuccessToast(notifications, state !== 'mute', {
+        numberOfRules: bulkSelectedRules.length,
+        numberOfDetectionRules: rulesData?.total || 0,
+      });
     }
   };
   const changeCspRuleStateMute = async () => {

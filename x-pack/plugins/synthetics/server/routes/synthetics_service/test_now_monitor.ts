@@ -16,18 +16,18 @@ import { SYNTHETICS_API_URLS } from '../../../common/constants';
 import { normalizeSecrets } from '../../synthetics_service/utils/secrets';
 
 export const testNowMonitorRoute: SyntheticsRestApiRouteFactory<TestNowResponse> = () => ({
-  method: 'GET',
+  method: 'POST',
   path: SYNTHETICS_API_URLS.TRIGGER_MONITOR + '/{monitorId}',
   validate: {
     params: schema.object({
       monitorId: schema.string({ minLength: 1, maxLength: 1024 }),
     }),
   },
-  writeAccess: true,
   handler: async (routeContext) => {
     const { monitorId } = routeContext.request.params;
     return triggerTestNow(monitorId, routeContext);
   },
+  writeAccess: true,
 });
 
 export const triggerTestNow = async (
