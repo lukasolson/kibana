@@ -87,8 +87,7 @@ export function DiscoverMainApp(props: DiscoverMainProps) {
   useEffect(() => {
     return () => {
       // clear session when navigating away from discover main
-      // TODO: Move this up (shouldn't be called when switching tabs)
-      // data.search.session.clear();
+      data.search.session.clear();
     };
   }, [data.search.session]);
 

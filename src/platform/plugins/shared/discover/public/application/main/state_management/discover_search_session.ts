@@ -50,8 +50,8 @@ export class DiscoverSearchSessionManager {
     this.searchSessionId$ = this.deps.session.getSession$();
   }
 
-  continueSearchSession(searchSessionId: string) {
-    this.deps.session.continue(searchSessionId);
+  restartSearchSession(searchSessionId: string) {
+    this.deps.session.start(searchSessionId);
   }
 
   /**

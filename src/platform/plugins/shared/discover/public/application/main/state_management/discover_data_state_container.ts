@@ -222,15 +222,15 @@ export function getDataStateContainer({
           const currentTab = selectCurrentTab(currentInternalState);
           const isNewTab = selectIsNewTab(currentInternalState);
 
+          // If we are returning to a tab and this is the initial query, use the existing
+          // searchSessionId & time range so that we can re-use the existing request from cache
           const searchSessionId =
             (options.fetchMore && searchSessionManager.getCurrentSearchSessionId()) ||
             (!isNewTab && options.initial && currentTab.dataRequestParams.searchSessionId) ||
             searchSessionManager.getNextSearchSessionId();
 
-          // If we are returning to a tab and this is the initial query, use the existing
-          // searchSessionId & time range so that we can re-use the existing request from cache
           if (searchSessionId === currentTab.dataRequestParams.searchSessionId) {
-            searchSessionManager.continueSearchSession(searchSessionId);
+            searchSessionManager.restartSearchSession(searchSessionId);
           } else {
             internalState.dispatch(
               internalStateActions.setDataRequestParams({
