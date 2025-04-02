@@ -53,6 +53,8 @@ export const updateTabs: InternalStateThunkActionCreator<[UpdateTabsParams], Pro
       return existingTab ? { ...existingTab, ...item } : { ...defaultTabState, ...item };
     });
 
+    const existingTab = selectedItem ? currentState.tabs.byId[selectedItem.id] : undefined;
+
     if (selectedItem?.id !== currentTab.id) {
       stopSyncing?.();
 
@@ -65,8 +67,6 @@ export const updateTabs: InternalStateThunkActionCreator<[UpdateTabsParams], Pro
             }
           : tab
       );
-
-      const existingTab = selectedItem ? currentState.tabs.byId[selectedItem.id] : undefined;
 
       if (existingTab) {
         await urlStateStorage.set('_g', existingTab.globalState);
@@ -81,6 +81,7 @@ export const updateTabs: InternalStateThunkActionCreator<[UpdateTabsParams], Pro
       setTabs({
         allTabs: updatedTabs,
         selectedTabId: selectedItem?.id ?? currentTab.id,
+        isNewTab: !existingTab,
       })
     );
   };

@@ -67,7 +67,7 @@ const initialState: DiscoverInternalState = {
   savedDataViews: [],
   expandedDoc: undefined,
   isESQLToDataViewTransitionModalVisible: false,
-  tabs: { byId: {}, allIds: [], currentId: '' },
+  tabs: { byId: {}, allIds: [], currentId: '', isNewTab: true },
 };
 
 export const createTabItem = (allTabs: TabState[]): TabItem => {
@@ -98,7 +98,10 @@ export const internalStateSlice = createSlice({
       state.initializationState = action.payload;
     },
 
-    setTabs: (state, action: PayloadAction<{ allTabs: TabState[]; selectedTabId: string }>) => {
+    setTabs: (
+      state,
+      action: PayloadAction<{ allTabs: TabState[]; selectedTabId: string; isNewTab: boolean }>
+    ) => {
       state.tabs.byId = action.payload.allTabs.reduce<Record<string, TabState>>(
         (acc, tab) => ({
           ...acc,
@@ -108,6 +111,7 @@ export const internalStateSlice = createSlice({
       );
       state.tabs.allIds = action.payload.allTabs.map((tab) => tab.id);
       state.tabs.currentId = action.payload.selectedTabId;
+      state.tabs.isNewTab = action.payload.isNewTab;
     },
 
     setDataViewId: (state, action: PayloadAction<string | undefined>) =>
@@ -198,7 +202,7 @@ export const createInternalStateStore = (options: InternalStateThunkDependencies
     ...defaultTabState,
     ...createTabItem(selectAllTabs(store.getState())),
   };
-  store.dispatch(setTabs({ allTabs: [defaultTab], selectedTabId: defaultTab.id }));
+  store.dispatch(setTabs({ allTabs: [defaultTab], selectedTabId: defaultTab.id, isNewTab: true }));
 
   return store;
 };

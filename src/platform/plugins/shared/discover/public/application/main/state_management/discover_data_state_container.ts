@@ -20,6 +20,7 @@ import { reportPerformanceMetricEvent } from '@kbn/ebt-tools';
 import type { SearchResponseWarning } from '@kbn/search-response-warnings';
 import type { DataTableRecord } from '@kbn/discover-utils/types';
 import { DEFAULT_COLUMNS_SETTING, SEARCH_ON_PAGE_LOAD_SETTING } from '@kbn/discover-utils';
+import { selectIsNewTab } from './redux/selectors';
 import { getEsqlDataView } from './utils/get_esql_data_view';
 import type { DiscoverAppStateContainer } from './discover_app_state_container';
 import type { DiscoverServices } from '../../../build_services';
@@ -45,7 +46,7 @@ export type DataTotalHits$ = BehaviorSubject<DataTotalHitsMsg>;
 
 export type DataRefetch$ = Subject<DataRefetchMsg>;
 
-export type DataRefetchMsg = 'reset' | 'fetch_more' | undefined;
+export type DataRefetchMsg = 'reset' | 'fetch_more' | 'initial' | undefined;
 
 export interface DataMsg {
   fetchStatus: FetchStatus;
@@ -72,7 +73,7 @@ export interface DiscoverDataStateContainer {
   /**
    * Implicitly starting fetching data from ES
    */
-  fetch: () => void;
+  fetch: (initial?: boolean) => void;
   /**
    * Fetch more data from ES
    */
@@ -205,10 +206,8 @@ export function getDataStateContainer({
       options: {
         reset: val === 'reset',
         fetchMore: val === 'fetch_more',
+        initial: val === 'initial',
       },
-      searchSessionId:
-        (val === 'fetch_more' && searchSessionManager.getCurrentSearchSessionId()) ||
-        searchSessionManager.getNextSearchSessionId(),
     })),
     share()
   );
@@ -218,7 +217,30 @@ export function getDataStateContainer({
   function subscribe() {
     const subscription = fetch$
       .pipe(
-        mergeMap(async ({ options, searchSessionId }) => {
+        mergeMap(async ({ options }) => {
+          const currentInternalState = internalState.getState();
+          const currentTab = selectCurrentTab(currentInternalState);
+          const isNewTab = selectIsNewTab(currentInternalState);
+
+          const searchSessionId =
+            (options.fetchMore && searchSessionManager.getCurrentSearchSessionId()) ||
+            (!isNewTab && options.initial && currentTab.dataRequestParams.searchSessionId) ||
+            searchSessionManager.getNextSearchSessionId();
+
+          // If we are returning to a tab and this is the initial query, use the existing
+          // searchSessionId & time range so that we can re-use the existing request from cache
+          if (searchSessionId === currentTab.dataRequestParams.searchSessionId) {
+            searchSessionManager.continueSearchSession(searchSessionId);
+          } else {
+            internalState.dispatch(
+              internalStateActions.setDataRequestParams({
+                timeRangeAbsolute: timefilter.getAbsoluteTime(),
+                timeRangeRelative: timefilter.getTime(),
+                searchSessionId,
+              })
+            );
+          }
+
           const commonFetchDeps = {
             initialFetchStatus: getInitialFetchStatus(),
             inspectorAdapters,
@@ -250,21 +272,13 @@ export function getDataStateContainer({
             return;
           }
 
-          internalState.dispatch(
-            internalStateActions.setDataRequestParams({
-              timeRangeAbsolute: timefilter.getAbsoluteTime(),
-              timeRangeRelative: timefilter.getTime(),
-            })
-          );
-
           await profilesManager.resolveDataSourceProfile({
             dataSource: appStateContainer.getState().dataSource,
             dataView: getSavedSearch().searchSource.getField('index'),
             query: appStateContainer.getState().query,
           });
 
-          const currentInternalState = internalState.getState();
-          const { resetDefaultProfileState } = selectCurrentTab(currentInternalState);
+          const { resetDefaultProfileState } = currentTab;
           const { currentDataView$ } = selectCurrentTabRuntimeState(
             currentInternalState,
             runtimeStateManager
@@ -352,7 +366,7 @@ export function getDataStateContainer({
     };
   }
 
-  const fetchQuery = async (resetQuery?: boolean) => {
+  const fetchQuery = async (initialQuery?: boolean) => {
     const query = appStateContainer.getState().query;
     const currentDataView = getSavedSearch().searchSource.getField('index');
 
@@ -363,8 +377,8 @@ export function getDataStateContainer({
       }
     }
 
-    if (resetQuery) {
-      refetch$.next('reset');
+    if (initialQuery) {
+      refetch$.next('initial');
     } else {
       refetch$.next(undefined);
     }

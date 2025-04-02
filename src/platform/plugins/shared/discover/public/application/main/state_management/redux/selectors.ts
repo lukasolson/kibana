@@ -14,3 +14,5 @@ export const selectAllTabs = (state: DiscoverInternalState) =>
 
 export const selectCurrentTab = (state: DiscoverInternalState) =>
   state.tabs.byId[state.tabs.currentId];
+
+export const selectIsNewTab = (state: DiscoverInternalState) => state.tabs.isNewTab;
