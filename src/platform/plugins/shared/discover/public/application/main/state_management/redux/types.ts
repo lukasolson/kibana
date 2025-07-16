@@ -15,33 +15,9 @@ import type { UnifiedDataTableRestorableState } from '@kbn/unified-data-table';
 import type { UnifiedFieldListRestorableState } from '@kbn/unified-field-list';
 import type { UnifiedHistogramVisContext } from '@kbn/unified-histogram';
 import type { TabItem } from '@kbn/unified-tabs';
+import type { DiscoverSession } from '@kbn/saved-search-plugin/common';
 import type { DiscoverAppState } from '../discover_app_state_container';
 import type { DiscoverLayoutRestorableState } from '../../components/layout/discover_layout_restorable_state';
-
-export enum LoadingStatus {
-  Uninitialized = 'uninitialized',
-  Loading = 'loading',
-  LoadingMore = 'loading_more',
-  Complete = 'complete',
-  Error = 'error',
-}
-
-type RequestState<
-  TResult extends {},
-  TLoadingStatus extends LoadingStatus = Exclude<LoadingStatus, LoadingStatus.LoadingMore>
-> =
-  | {
-      loadingStatus: Exclude<TLoadingStatus, LoadingStatus.Error>;
-      result: TResult;
-    }
-  | {
-      loadingStatus: LoadingStatus.Error;
-      error: Error;
-    };
-
-export type DocumentsRequest = RequestState<DataTableRecord[], LoadingStatus>;
-export type TotalHitsRequest = RequestState<number>;
-export type ChartRequest = RequestState<{}>;
 
 export interface InternalStateDataRequestParams {
   timeRangeAbsolute: TimeRange | undefined;
@@ -62,7 +38,6 @@ export interface TabState extends TabItem {
 
   // The following properties are used to manage the tab's state after it has been initialized.
   lastPersistedGlobalState: TabStateGlobalState;
-  dataViewId: string | undefined;
   isDataViewLoading: boolean;
   dataRequestParams: InternalStateDataRequestParams;
   overriddenVisContextAfterInvalidation: UnifiedHistogramVisContext | {} | undefined; // it will be used during saved search saving
@@ -73,9 +48,6 @@ export interface TabState extends TabItem {
     breakdownField: boolean;
     hideChart: boolean;
   };
-  documentsRequest: DocumentsRequest;
-  totalHitsRequest: TotalHitsRequest;
-  chartRequest: ChartRequest;
   uiState: {
     dataGrid?: Partial<UnifiedDataTableRestorableState>;
     fieldList?: Partial<UnifiedFieldListRestorableState>;
@@ -89,12 +61,16 @@ export interface RecentlyClosedTabState extends TabState {
 
 export interface DiscoverInternalState {
   initializationState: { hasESData: boolean; hasUserDataView: boolean };
+  userId: string | undefined;
+  spaceId: string | undefined;
+  persistedDiscoverSession: DiscoverSession | undefined;
   savedDataViews: DataViewListItem[];
   defaultProfileAdHocDataViewIds: string[];
   expandedDoc: DataTableRecord | undefined;
   initialDocViewerTabId?: string;
   isESQLToDataViewTransitionModalVisible: boolean;
   tabs: {
+    areInitializing: boolean;
     byId: Record<string, TabState | RecentlyClosedTabState>;
     allIds: string[];
     recentlyClosedTabIds: string[];
