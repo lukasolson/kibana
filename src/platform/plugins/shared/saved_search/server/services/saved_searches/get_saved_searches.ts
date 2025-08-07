@@ -10,7 +10,7 @@
 import type { SavedObject, SavedObjectsClientContract } from '@kbn/core/server';
 import type { ISearchStartSearchSource } from '@kbn/data-plugin/common';
 import { injectReferences, parseSearchSourceJSON } from '@kbn/data-plugin/common';
-import { fromSavedSearchAttributes } from '../../../common';
+import { fromSavedSearchAttributes } from '../../../common/saved_searches_utils';
 import type { DiscoverSessionAttributes } from '../../saved_objects/schema';
 
 interface GetSavedSearchDependencies {

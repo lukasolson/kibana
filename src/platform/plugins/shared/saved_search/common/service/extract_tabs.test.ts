@@ -9,7 +9,8 @@
 import type { SavedObjectModelTransformationContext } from '@kbn/core-saved-objects-server';
 import type { TypeOf } from '@kbn/config-schema';
 import type { SCHEMA_SEARCH_MODEL_VERSION_5 } from '../../server/saved_objects/schema';
-import { extractTabs, extractTabsTransformFn, SavedSearchType, VIEW_MODE } from '..';
+import { extractTabs, extractTabsTransformFn } from './extract_tabs';
+import { SavedSearchType, VIEW_MODE } from '..';
 
 jest.mock('uuid', () => ({
   v4: jest.fn(() => 'mock-uuid'),
@@ -66,7 +67,7 @@ describe('extractTabs', () => {
                 "viewMode": "documents",
               },
               "id": "mock-uuid",
-              "label": "Untitled session 1",
+              "label": "Untitled",
             },
           ],
           "title": "my_title",
@@ -125,7 +126,7 @@ describe('extractTabs', () => {
                     "viewMode": "documents",
                   },
                   "id": "mock-uuid",
-                  "label": "Untitled session 1",
+                  "label": "Untitled",
                 },
               ],
               "title": "my_title",
