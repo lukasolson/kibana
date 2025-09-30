@@ -16,6 +16,7 @@ import xContentParseException from '../../../../common/search/test_data/x_conten
 import type { SearchStrategyDependencies } from '../../types';
 import { esqlAsyncSearchStrategyProvider } from './esql_async_search_strategy';
 import { getMockSearchConfig } from '../../../../config.mock';
+import { coreFeatureFlagsMock } from '@kbn/core/server/mocks';
 
 const mockAsyncResponse = {
   body: {
@@ -49,6 +50,7 @@ describe('ES|QL async search strategy', () => {
         transport: { request: mockApiCaller },
       },
     },
+    featureFlags: coreFeatureFlagsMock.createStart(),
   } as unknown as SearchStrategyDependencies;
 
   const mockSearchConfig = getMockSearchConfig({});
