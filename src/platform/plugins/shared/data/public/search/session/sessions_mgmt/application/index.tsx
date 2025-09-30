@@ -9,7 +9,6 @@
 
 import type { CoreSetup } from '@kbn/core/public';
 import type { ManagementAppMountParams } from '@kbn/management-plugin/public';
-import { BACKGROUND_SEARCH_FEATURE_FLAG_KEY } from '../../../../../common/constants';
 import type {
   AppDependencies,
   IManagementSectionsPluginsSetup,
@@ -44,11 +43,7 @@ export class SearchSessionsMgmtApp {
       application,
     } = coreStart;
 
-    const hasBackgroundSearchEnabled = coreStart.featureFlags.getBooleanValue(
-      BACKGROUND_SEARCH_FEATURE_FLAG_KEY,
-      false
-    );
-    const pluginName = APP.getI18nName(hasBackgroundSearchEnabled);
+    const pluginName = APP.getI18nName();
     docTitle.change(pluginName);
     this.params.setBreadcrumbs([{ text: pluginName }]);
 

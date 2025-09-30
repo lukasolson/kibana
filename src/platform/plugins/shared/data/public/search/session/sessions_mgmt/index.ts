@@ -53,14 +53,10 @@ export interface AppDependencies {
 
 export const APP = {
   id: SEARCH_SESSIONS_MANAGEMENT_ID,
-  getI18nName: (hasBackgroundSearchEnabled: boolean): string =>
-    hasBackgroundSearchEnabled
-      ? i18n.translate('data.mgmt.backgroundSearch.appTitle', {
-          defaultMessage: 'Background Search',
-        })
-      : i18n.translate('data.mgmt.searchSessions.appTitle', {
-          defaultMessage: 'Search Sessions',
-        }),
+  getI18nName: (): string =>
+    i18n.translate('data.mgmt.backgroundSearch.appTitle', {
+      defaultMessage: 'Background Search',
+    }),
 };
 
 export function registerSearchSessionsMgmtIfNeeded(
@@ -104,7 +100,7 @@ function registerSearchSessionsMgmt(
 ) {
   return deps.management.sections.section.kibana.registerApp({
     id: APP.id,
-    title: APP.getI18nName(hasBackgroundSearchEnabled),
+    title: APP.getI18nName(),
     order: 1.75,
     mount: async (params) => {
       const { SearchSessionsMgmtApp: MgmtApp } = await import('./application');

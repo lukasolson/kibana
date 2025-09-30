@@ -22,16 +22,12 @@ import { RequestAdapter } from '@kbn/inspector-plugin/common/adapters/request';
 import type { DataViewsContract } from '@kbn/data-views-plugin/common';
 import type { ExpressionsSetup } from '@kbn/expressions-plugin/public';
 import type { FieldFormatsStart } from '@kbn/field-formats-plugin/public';
-import { toMountPoint } from '@kbn/react-kibana-mount';
-import { Storage } from '@kbn/kibana-utils-plugin/public';
 import type { ManagementSetup } from '@kbn/management-plugin/public';
 import type { ScreenshotModePluginStart } from '@kbn/screenshot-mode-plugin/public';
 import type { UsageCollectionSetup } from '@kbn/usage-collection-plugin/public';
 import type { Start as InspectorStartContract } from '@kbn/inspector-plugin/public';
-import React from 'react';
 import { BehaviorSubject } from 'rxjs';
 import type { SharePluginStart } from '@kbn/share-plugin/public';
-import { BACKGROUND_SEARCH_FEATURE_FLAG_KEY } from '../../common/constants';
 import type { SearchSourceDependencies } from '../../common/search';
 import {
   cidrFunction,
@@ -76,7 +72,6 @@ import { SearchInterceptor } from './search_interceptor';
 import type { ISessionsClient, ISessionService } from './session';
 import { SessionsClient, SessionService } from './session';
 import { registerSearchSessionsMgmtIfNeeded } from './session/sessions_mgmt';
-import { createConnectedSearchSessionIndicator } from './session/session_indicator';
 import type { ISearchSetup, ISearchStart } from './types';
 import { openSearchSessionsFlyout } from './session/sessions_mgmt';
 
@@ -290,29 +285,7 @@ export class SearchService implements Plugin<ISearchSetup, ISearchStart> {
       },
       scriptedFieldsEnabled,
     };
-
     const config = this.initializerContext.config.get();
-    if (
-      config.search.sessions.enabled &&
-      !coreStart.featureFlags.getBooleanValue(BACKGROUND_SEARCH_FEATURE_FLAG_KEY, false)
-    ) {
-      chrome.setBreadcrumbsAppendExtension({
-        content: toMountPoint(
-          React.createElement(
-            createConnectedSearchSessionIndicator({
-              sessionService: this.sessionService,
-              application,
-              basePath: http.basePath,
-              storage: new Storage(window.localStorage),
-              usageCollector: this.usageCollector,
-              tourDisabled: screenshotMode.isScreenshotMode(),
-              featureFlags: coreStart.featureFlags,
-            })
-          ),
-          startServices
-        ),
-      });
-    }
 
     return {
       aggs,
@@ -348,10 +321,7 @@ export class SearchService implements Plugin<ISearchSetup, ISearchStart> {
           });
         });
       },
-      isBackgroundSearchEnabled: coreStart.featureFlags.getBooleanValue(
-        BACKGROUND_SEARCH_FEATURE_FLAG_KEY,
-        false
-      ),
+      isBackgroundSearchEnabled: config.search.sessions.enabled,
       session: this.sessionService,
       sessionsClient: this.sessionsClient,
       searchSource: this.searchSourceService.start(indexPatterns, searchSourceDependencies),

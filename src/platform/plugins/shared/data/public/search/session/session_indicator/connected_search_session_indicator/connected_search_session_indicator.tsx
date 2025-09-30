@@ -15,7 +15,6 @@ import { i18n } from '@kbn/i18n';
 import { RedirectAppLinks } from '@kbn/shared-ux-link-redirect-app';
 import type { IStorageWrapper } from '@kbn/kibana-utils-plugin/public';
 import type { ApplicationStart, FeatureFlagsStart, IBasePath } from '@kbn/core/public';
-import { BACKGROUND_SEARCH_FEATURE_FLAG_KEY } from '../../../../../common/constants';
 import type { SearchSessionIndicatorRef } from '../search_session_indicator';
 import { SearchSessionIndicator } from '../search_session_indicator';
 import { useSearchSessionTour } from './search_session_tour';
@@ -40,13 +39,7 @@ export const createConnectedSearchSessionIndicator = ({
   usageCollector,
   basePath,
   tourDisabled,
-  featureFlags,
 }: SearchSessionIndicatorDeps): React.FC => {
-  const hasBackgroundSearchEnabled = featureFlags.getBooleanValue(
-    BACKGROUND_SEARCH_FEATURE_FLAG_KEY,
-    false
-  );
-
   const searchSessionsManagementUrl = basePath.prepend('/app/management/kibana/search_sessions');
 
   const debouncedSessionServiceState$ = sessionService.state$.pipe(
@@ -77,16 +70,12 @@ export const createConnectedSearchSessionIndicator = ({
 
     if (disableSaveAfterSearchesExpire) {
       saveDisabled = true;
-      saveDisabledReasonText = hasBackgroundSearchEnabled
-        ? i18n.translate(
-            'data.searchSessionIndicator.backgroundSearchDisabledDueToTimeoutMessage',
-            {
-              defaultMessage: 'Background search results expired.',
-            }
-          )
-        : i18n.translate('data.searchSessionIndicator.disabledDueToTimeoutMessage', {
-            defaultMessage: 'Search session results expired.',
-          });
+      saveDisabledReasonText = i18n.translate(
+        'data.searchSessionIndicator.backgroundSearchDisabledDueToTimeoutMessage',
+        {
+          defaultMessage: 'Background search results expired.',
+        }
+      );
     }
 
     if (isSaveDisabledByApp.disabled) {
@@ -98,16 +87,12 @@ export const createConnectedSearchSessionIndicator = ({
     // this happens in case there is no app that allows current user to use search session
     if (!sessionService.hasAccess()) {
       managementDisabled = saveDisabled = true;
-      managementDisabledReasonText = saveDisabledReasonText = hasBackgroundSearchEnabled
-        ? i18n.translate(
-            'data.searchSessionIndicator.backgroundSearchDisabledDueToDisabledGloballyMessage',
-            {
-              defaultMessage: "You don't have permissions to manage background searches",
-            }
-          )
-        : i18n.translate('data.searchSessionIndicator.disabledDueToDisabledGloballyMessage', {
-            defaultMessage: "You don't have permissions to manage search sessions",
-          });
+      managementDisabledReasonText = saveDisabledReasonText = i18n.translate(
+        'data.searchSessionIndicator.backgroundSearchDisabledDueToDisabledGloballyMessage',
+        {
+          defaultMessage: "You don't have permissions to manage background searches",
+        }
+      );
     }
 
     const { markOpenedDone, markRestoredDone } = useSearchSessionTour(
@@ -191,7 +176,6 @@ export const createConnectedSearchSessionIndicator = ({
           startedTime={startTime}
           completedTime={completedTime}
           canceledTime={canceledTime}
-          hasBackgroundSearchEnabled={hasBackgroundSearchEnabled}
         />
       </RedirectAppLinks>
     );
