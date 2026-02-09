@@ -49,95 +49,97 @@ const sortSchema = schema.object({
   }),
 });
 
-// TODO: This is duplicated from the Lens embeddable schema. We should move these to a shared location.
-export const datasetTypeSchema = schema.oneOf([
-  // DataView dataset type
-  schema.object(
-    {
-      type: schema.literal('dataView'),
-      /**
-       * The name of the Kibana data view to use as the data source.
-       * Example: 'my-data-view'
-       */
-      id: schema.string({
+/**
+ * TODO: These are duplicated from the Lens embeddable schema. We should move these to a shared location.
+ * @see datasetTypeSchema
+ */
+export const dataViewReferenceSchema = schema.object(
+  {
+    type: schema.literal('dataView'),
+    /**
+     * The name of the Kibana data view to use as the data source.
+     * Example: 'my-data-view'
+     */
+    id: schema.string({
+      meta: {
+        description:
+          'The id of the Kibana data view to use as the data source. Example: "my-data-view".',
+      },
+    }),
+  },
+  { meta: { id: 'dataViewDatasetTypeSchema' } }
+);
+
+export const dataViewSpecSchema = schema.object(
+  {
+    type: schema.literal('index'),
+    /**
+     * The name of the Elasticsearch index to use as the data source.
+     * Example: 'my-index-*'
+     */
+    index: schema.string({
+      meta: {
+        description:
+          'The name of the Elasticsearch index to use as the data source. Example: "my-index-*".',
+      },
+    }),
+    /**
+     * The name of the time field in the index. Used for time-based filtering.
+     * Example: '@timestamp'
+     */
+    time_field: schema.maybe(
+      schema.string({
         meta: {
           description:
-            'The id of the Kibana data view to use as the data source. Example: "my-data-view".',
+            'The name of the time field in the index. Used for time-based filtering. Example: "@timestamp".',
         },
-      }),
-    },
-    { meta: { id: 'dataViewDatasetTypeSchema' } }
-  ),
-  // Index dataset type
-  schema.object(
-    {
-      type: schema.literal('index'),
-      /**
-       * The name of the Elasticsearch index to use as the data source.
-       * Example: 'my-index-*'
-       */
-      index: schema.string({
-        meta: {
-          description:
-            'The name of the Elasticsearch index to use as the data source. Example: "my-index-*".',
-        },
-      }),
-      /**
-       * The name of the time field in the index. Used for time-based filtering.
-       * Example: '@timestamp'
-       */
-      time_field: schema.maybe(
-        schema.string({
-          meta: {
-            description:
-              'The name of the time field in the index. Used for time-based filtering. Example: "@timestamp".',
-          },
-        })
-      ),
-      /**
-       * Optional array of runtime fields to define on the index. Each runtime field describes a computed field available at query time.
-       * If not provided, no runtime fields are used.
-       */
-      runtime_fields: schema.maybe(
-        schema.arrayOf(
-          schema.object({
-            /**
-             * The type of the runtime field (e.g., 'keyword', 'long', 'date').
-             * Example: 'keyword'
-             */
-            type: schema.string({
+      })
+    ),
+    /**
+     * Optional array of runtime fields to define on the index. Each runtime field describes a computed field available at query time.
+     * If not provided, no runtime fields are used.
+     */
+    runtime_fields: schema.maybe(
+      schema.arrayOf(
+        schema.object({
+          /**
+           * The type of the runtime field (e.g., 'keyword', 'long', 'date').
+           * Example: 'keyword'
+           */
+          type: schema.string({
+            meta: {
+              description: 'The type of the runtime field (e.g., "keyword", "long", "date").',
+            },
+          }),
+          /**
+           * The name of the runtime field.
+           * Example: 'my_runtime_field'
+           */
+          name: schema.string({
+            meta: {
+              description: 'The name of the runtime field. Example: "my_runtime_field".',
+            },
+          }),
+          /**
+           * Optional format definition for the runtime field. The structure depends on the field type and use case.
+           * If not provided, no format is applied.
+           */
+          format: schema.maybe(
+            schema.any({
               meta: {
                 description: 'The type of the runtime field (e.g., "keyword", "long", "date").',
               },
-            }),
-            /**
-             * The name of the runtime field.
-             * Example: 'my_runtime_field'
-             */
-            name: schema.string({
-              meta: {
-                description: 'The name of the runtime field. Example: "my_runtime_field".',
-              },
-            }),
-            /**
-             * Optional format definition for the runtime field. The structure depends on the field type and use case.
-             * If not provided, no format is applied.
-             */
-            format: schema.maybe(
-              schema.any({
-                meta: {
-                  description: 'The type of the runtime field (e.g., "keyword", "long", "date").',
-                },
-              })
-            ),
-          }),
-          { maxSize: 100 }
-        )
-      ),
-    },
-    { meta: { id: 'indexDatasetTypeSchema' } }
-  ),
-]);
+            })
+          ),
+        }),
+        { maxSize: 100 }
+      )
+    ),
+  },
+  { meta: { id: 'indexDatasetTypeSchema' } }
+);
+
+export const dataViewSchema = schema.oneOf([dataViewReferenceSchema, dataViewSpecSchema]);
 
 const dataTableLimitsSchema = schema.object(
   {
@@ -257,7 +259,7 @@ const classicTabSchema = schema.allOf([
         description: 'List of filters to apply to the data in the tab.',
       },
     }),
-    dataset: datasetTypeSchema,
+    dataset: dataViewSchema,
   }),
 ]);
 
