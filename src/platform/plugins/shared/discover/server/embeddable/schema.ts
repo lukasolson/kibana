@@ -44,7 +44,7 @@ const sortSchema = schema.object({
   direction: schema.oneOf([schema.literal('asc'), schema.literal('desc')], {
     meta: {
       description:
-        'The direction to sort the field by: "asc" for ascending, "desc" for descending.',
+        'The direction to sort the field by: Use "asc" for ascending or "desc" for descending.',
     },
   }),
 });
@@ -143,30 +143,36 @@ export const dataViewSchema = schema.oneOf([dataViewReferenceSchema, dataViewSpe
 
 const dataTableLimitsSchema = schema.object(
   {
-    rows_per_page: schema.oneOf(
-      [
-        schema.literal(10),
-        schema.literal(25),
-        schema.literal(50),
-        schema.literal(100),
-        schema.literal(250),
-        schema.literal(500),
-      ],
-      {
-        defaultValue: 100,
-        meta: {
-          description: 'The number of rows to display per page in the data table.',
-        },
-      }
+    rows_per_page: schema.maybe(
+      schema.oneOf(
+        [
+          schema.literal(10),
+          schema.literal(25),
+          schema.literal(50),
+          schema.literal(100),
+          schema.literal(250),
+          schema.literal(500),
+        ],
+        {
+          defaultValue: 100,
+          meta: {
+            description:
+              'The number of rows to display per page in the data table. If omitted, defaults to the advanced setting "discover:sampleRowsPerPage".',
+          },
+        }
+      )
     ),
-    sample_size: schema.number({
-      min: 10,
-      max: 10000,
-      defaultValue: 500,
-      meta: {
-        description: 'The number of documents to sample for the data table.',
-      },
-    }),
+    sample_size: schema.maybe(
+      schema.number({
+        min: 10,
+        max: 10000,
+        defaultValue: 500,
+        meta: {
+          description:
+            'The number of documents to sample for the data table. If omitted, defaults to the advanced setting "discover:sampleSize".',
+        },
+      })
+    ),
   },
   { meta: { id: 'discoverSessionEmbeddableDataTableLimitsSchema' } }
 );
@@ -177,14 +183,15 @@ const dataTableSchema = schema.object(
       maxSize: 100,
       defaultValue: [],
       meta: {
-        description: 'List of columns to display in the data table.',
+        description:
+          'List of columns to display in the data table. If omitted, defaults to the advanced setting "defaultColumns".',
       },
     }),
     sort: schema.arrayOf(sortSchema, {
       maxSize: 100,
       defaultValue: [],
       meta: {
-        description: 'List of sort fields and their directions for the data table.',
+        description: 'Sort configuration for the data table (field and direction).',
       },
     }),
     view_mode: schema.oneOf(
@@ -196,7 +203,8 @@ const dataTableSchema = schema.object(
       {
         defaultValue: VIEW_MODE.DOCUMENT_LEVEL,
         meta: {
-          description: 'The view mode for the data table: document, pattern, or aggregated level.',
+          description:
+            'Discover view mode. Choose "documents" (search hits), "patterns" (pattern analysis), or "aggregated" (field statistics).',
         },
       }
     ),
@@ -209,7 +217,8 @@ const dataTableSchema = schema.object(
       {
         defaultValue: DataGridDensity.COMPACT,
         meta: {
-          description: 'The density setting for the data table: compact, expanded, or normal.',
+          description:
+            'Data grid density. Choose "compact", "expanded", or "normal" for row spacing.',
         },
       }
     ),
@@ -223,8 +232,7 @@ const dataTableSchema = schema.object(
       ],
       {
         meta: {
-          description:
-            'Height of the header row in the data table. Use "auto" for automatic height adjustment based on content.',
+          description: 'Header row height. Use a number (1–5) or "auto" to size based on content.',
         },
       }
     ),
@@ -239,7 +247,7 @@ const dataTableSchema = schema.object(
       {
         meta: {
           description:
-            'Height of the data row(s) in the data table. Use "auto" for automatic height adjustment based on content.',
+            'Data row height. Use a number (1–20) or "auto" to size based on content. If omitted, defaults to the advanced setting "discover:rowHeightOption".',
         },
       }
     ),
@@ -263,10 +271,16 @@ const classicTabSchema = schema.allOf([
   }),
 ]);
 
-// TODO: Should we follow Lens & use a dataset instead of a separate query field?
 const esqlTabSchema = schema.allOf([
   dataTableSchema,
-  schema.object({ query: aggregateQuerySchema }),
+  schema.object(
+    { query: aggregateQuerySchema },
+    {
+      meta: {
+        description: 'ES|QL (Elasticsearch Query Language) statement.',
+      },
+    }
+  ),
 ]);
 
 const tabSchema = schema.oneOf([classicTabSchema, esqlTabSchema]);
