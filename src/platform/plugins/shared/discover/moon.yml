@@ -96,7 +96,6 @@ dependsOn:
   - '@kbn/aiops-plugin'
   - '@kbn/data-visualizer-plugin'
   - '@kbn/search-types'
-  - '@kbn/presentation-containers'
   - '@kbn/observability-ai-assistant-plugin'
   - '@kbn/fields-metadata-plugin'
   - '@kbn/discover-contextual-components'
@@ -134,6 +133,8 @@ dependsOn:
   - '@kbn/es-query-constants'
   - '@kbn/es-query-server'
   - '@kbn/presentation-publishing-schemas'
+  - '@kbn/esql'
+  - '@kbn/controls-schemas'
 tags:
   - plugin
   - prod

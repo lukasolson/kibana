@@ -12,7 +12,7 @@ import { schema } from '@kbn/config-schema';
 import { DataGridDensity } from '@kbn/discover-utils';
 import {
   aggregateQuerySchema,
-  asCodeFilterSchema,
+  storedFilterSchema,
   querySchema,
   timeRangeSchema,
 } from '@kbn/es-query-server';
@@ -252,7 +252,7 @@ const classicTabSchema = schema.allOf([
   dataTableLimitsSchema,
   schema.object({
     query: schema.maybe(querySchema),
-    filters: schema.arrayOf(asCodeFilterSchema, {
+    filters: schema.arrayOf(storedFilterSchema, {
       maxSize: 100,
       defaultValue: [],
       meta: {
