@@ -10,14 +10,10 @@
 import type { TypeOf } from '@kbn/config-schema';
 import { schema } from '@kbn/config-schema';
 import { DataGridDensity } from '@kbn/discover-utils';
-import {
-  aggregateQuerySchema,
-  storedFilterSchema,
-  querySchema,
-  timeRangeSchema,
-} from '@kbn/es-query-server';
+import { aggregateQuerySchema, querySchema, timeRangeSchema } from '@kbn/es-query-server';
 import { serializedTitlesSchema } from '@kbn/presentation-publishing-schemas';
 import { VIEW_MODE } from '@kbn/saved-search-plugin/common';
+import { asCodeFilterSchema } from '@kbn/as-code-filters-schema';
 
 const columnSchema = schema.object({
   name: schema.string({
@@ -121,13 +117,26 @@ export const dataViewSpecSchema = schema.object(
             },
           }),
           /**
+           * The script that defines the runtime field. This should be a painless script that computes the field value at query time.
+           * Example: 'emit(doc["field_name"].value * 2);'
+           */
+          script: schema.maybe(
+            schema.string({
+              meta: {
+                description:
+                  'The script that defines the runtime field. This should be a painless script that computes the field value at query time.',
+              },
+            })
+          ),
+          /**
            * Optional format definition for the runtime field. The structure depends on the field type and use case.
            * If not provided, no format is applied.
            */
           format: schema.maybe(
             schema.any({
               meta: {
-                description: 'The type of the runtime field (e.g., "keyword", "long", "date").',
+                description:
+                  'Optional format definition for the runtime field. The structure depends on the field type and use case.',
               },
             })
           ),
@@ -179,14 +188,16 @@ const dataTableLimitsSchema = schema.object(
 
 const dataTableSchema = schema.object(
   {
-    columns: schema.arrayOf(columnSchema, {
-      maxSize: 100,
-      defaultValue: [],
-      meta: {
-        description:
-          'List of columns to display in the data table. If omitted, defaults to the advanced setting "defaultColumns".',
-      },
-    }),
+    columns: schema.maybe(
+      schema.arrayOf(columnSchema, {
+        maxSize: 100,
+        defaultValue: [],
+        meta: {
+          description:
+            'List of columns to display in the data table. If omitted, defaults to the advanced setting "defaultColumns".',
+        },
+      })
+    ),
     sort: schema.arrayOf(sortSchema, {
       maxSize: 100,
       defaultValue: [],
@@ -236,20 +247,23 @@ const dataTableSchema = schema.object(
         },
       }
     ),
-    row_height: schema.oneOf(
-      [
-        schema.number({
-          min: 1,
-          max: 20,
-        }),
-        schema.literal('auto'),
-      ],
-      {
-        meta: {
-          description:
-            'Data row height. Use a number (1–20) or "auto" to size based on content. If omitted, defaults to the advanced setting "discover:rowHeightOption".',
-        },
-      }
+    row_height: schema.maybe(
+      schema.oneOf(
+        [
+          schema.number({
+            min: 1,
+            max: 20,
+          }),
+          schema.literal('auto'),
+        ],
+        {
+          defaultValue: 3,
+          meta: {
+            description:
+              'Data row height. Use a number (1–20) or "auto" to size based on content. If omitted, defaults to the advanced setting "discover:rowHeightOption".',
+          },
+        }
+      )
     ),
   },
   { meta: { id: 'discoverSessionEmbeddableDataTableSchema' } }
@@ -260,7 +274,7 @@ const classicTabSchema = schema.allOf([
   dataTableLimitsSchema,
   schema.object({
     query: schema.maybe(querySchema),
-    filters: schema.arrayOf(storedFilterSchema, {
+    filters: schema.arrayOf(asCodeFilterSchema, {
       maxSize: 100,
       defaultValue: [],
       meta: {
