@@ -7,7 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-import type { TypeOf } from '@kbn/config-schema';
+import type { Type, TypeOf } from '@kbn/config-schema';
 import { schema } from '@kbn/config-schema';
 import { DataGridDensity } from '@kbn/discover-utils';
 import { aggregateQuerySchema, querySchema, timeRangeSchema } from '@kbn/es-query-server';
@@ -299,7 +299,7 @@ const esqlTabSchema = schema.allOf([
 
 const tabSchema = schema.oneOf([classicTabSchema, esqlTabSchema]);
 
-export const discoverSessionByValueEmbeddableSchema = schema.allOf([
+const discoverSessionByValueEmbeddableSchema = schema.allOf([
   serializedTitlesSchema,
   schema.object({
     tabs: schema.arrayOf(tabSchema, {
@@ -314,7 +314,7 @@ export const discoverSessionByValueEmbeddableSchema = schema.allOf([
   }),
 ]);
 
-export const discoverSessionByReferenceEmbeddableSchema = schema.allOf([
+const discoverSessionByReferenceEmbeddableSchema = schema.allOf([
   serializedTitlesSchema,
   schema.object({
     discover_session_id: schema.string(),
@@ -327,10 +327,12 @@ export const discoverSessionByReferenceEmbeddableSchema = schema.allOf([
   }),
 ]);
 
-export const discoverSessionEmbeddableSchema = schema.oneOf([
+const _discoverSessionEmbeddableSchema = schema.oneOf([
   discoverSessionByValueEmbeddableSchema,
   discoverSessionByReferenceEmbeddableSchema,
 ]);
+export const discoverSessionEmbeddableSchema: Type<DiscoverSessionEmbeddableState> =
+  _discoverSessionEmbeddableSchema;
 
 export type DiscoverSessionEmbeddableByValueState = TypeOf<
   typeof discoverSessionByValueEmbeddableSchema
