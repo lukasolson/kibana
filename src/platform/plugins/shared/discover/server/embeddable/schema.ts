@@ -7,7 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-import type { Type, TypeOf } from '@kbn/config-schema';
+import type { TypeOf } from '@kbn/config-schema';
 import { schema } from '@kbn/config-schema';
 import { DataGridDensity } from '@kbn/discover-utils';
 import { aggregateQuerySchema, querySchema, timeRangeSchema } from '@kbn/es-query-server';
@@ -327,12 +327,10 @@ const discoverSessionByReferenceEmbeddableSchema = schema.allOf([
   }),
 ]);
 
-const _discoverSessionEmbeddableSchema = schema.oneOf([
+export const discoverSessionEmbeddableSchema = schema.oneOf([
   discoverSessionByValueEmbeddableSchema,
   discoverSessionByReferenceEmbeddableSchema,
 ]);
-export const discoverSessionEmbeddableSchema: Type<DiscoverSessionEmbeddableState> =
-  _discoverSessionEmbeddableSchema;
 
 export type DiscoverSessionEmbeddableByValueState = TypeOf<
   typeof discoverSessionByValueEmbeddableSchema

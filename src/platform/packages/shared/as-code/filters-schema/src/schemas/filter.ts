@@ -172,10 +172,14 @@ const conditionSchema = schema.discriminatedUnion(
 // FILTER DISCRIMINATED UNION SCHEMA
 // ====================================================================
 
-interface RecursiveType {
+/**
+ * Type for recursive group filter structure (used by schema.lazy).
+ * Exported so consumers that re-export schemas using `asCodeFilterSchema` can name this type.
+ */
+export interface RecursiveCondition {
   group: {
     operator: typeof ASCODE_GROUPED_CONDITION_TYPE.AND | typeof ASCODE_GROUPED_CONDITION_TYPE.OR;
-    conditions: Array<TypeOf<typeof conditionSchema> | RecursiveType>;
+    conditions: Array<TypeOf<typeof conditionSchema> | RecursiveCondition>;
   };
 }
 
@@ -207,7 +211,7 @@ export const asCodeGroupFilterSchema = commonBasePropertiesSchema.extends(
         conditions: schema.arrayOf(
           schema.oneOf([
             conditionSchema,
-            schema.lazy<RecursiveType>(GROUP_FILTER_ID), // Recursive reference for nested groups
+            schema.lazy<RecursiveCondition>(GROUP_FILTER_ID), // Recursive reference for nested groups
           ])
         ),
       },

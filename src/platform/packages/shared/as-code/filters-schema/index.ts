@@ -22,3 +22,5 @@ export type {
   AsCodeDSLFilter,
   AsCodeSpatialFilter,
 } from './src/types';
+
+export type { RecursiveCondition } from './src/schemas/filter';
