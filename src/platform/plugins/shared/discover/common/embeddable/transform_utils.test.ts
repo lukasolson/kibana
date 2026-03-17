@@ -476,6 +476,112 @@ describe('search embeddable transform utils', () => {
     });
   });
 
+  describe('transform then reversion (1:1 validation)', () => {
+    it('by-value: SavedSearch → API → SavedSearch yields semantically identical state', () => {
+      const storedState: StoredSearchEmbeddableByValueState = {
+        title: 'My Discover Session',
+        description: 'Session description',
+        attributes: {
+          title: '',
+          description: '',
+          sort: [['@timestamp', 'desc']],
+          columns: ['message', '@timestamp'],
+          grid: { columns: { '@timestamp': { width: 200 } } },
+          hideChart: false,
+          viewMode: VIEW_MODE.DOCUMENT_LEVEL,
+          isTextBasedQuery: false,
+          timeRestore: false,
+          kibanaSavedObjectMeta: {
+            searchSourceJSON:
+              '{"query":{"language":"kuery","query":""},"filter":[],"indexRefName":"kibanaSavedObjectMeta.searchSourceJSON.index"}',
+          },
+          tabs: [
+            {
+              id: 'tab-1',
+              label: 'Tab 1',
+              attributes: {
+                sort: [['@timestamp', 'desc']],
+                columns: ['message', '@timestamp'],
+                grid: { columns: { '@timestamp': { width: 200 } } },
+                hideChart: false,
+                viewMode: VIEW_MODE.DOCUMENT_LEVEL,
+                isTextBasedQuery: false,
+                timeRestore: false,
+                rowHeight: -1,
+                headerRowHeight: -1,
+                kibanaSavedObjectMeta: {
+                  searchSourceJSON:
+                    '{"query":{"language":"kuery","query":""},"filter":[],"indexRefName":"kibanaSavedObjectMeta.searchSourceJSON.index"}',
+                },
+              },
+            },
+          ],
+        },
+      };
+      const references: SavedObjectReference[] = [
+        {
+          name: 'kibanaSavedObjectMeta.searchSourceJSON.index',
+          type: 'index-pattern',
+          id: 'data-view-123',
+        },
+      ];
+
+      const apiState = byValueSavedSearchToDiscoverSessionEmbeddableState(storedState, references);
+      const { state: reverted, references: revertedRefs } =
+        byValueDiscoverSessionToSavedSearchEmbeddableState(apiState, []);
+
+      expect(reverted.attributes.title).toBe(storedState.title);
+      expect(reverted.attributes.description).toBe(storedState.description);
+      expect(reverted.attributes.tabs).toHaveLength(storedState.attributes.tabs!.length);
+
+      const initialTabAttrs = storedState.attributes.tabs![0].attributes;
+      const revertedTabAttrs = reverted.attributes.tabs[0].attributes;
+      expect(revertedTabAttrs.sort).toEqual(initialTabAttrs.sort);
+      expect(revertedTabAttrs.columns).toEqual(initialTabAttrs.columns);
+      expect(revertedTabAttrs.grid).toEqual(initialTabAttrs.grid);
+      expect(revertedTabAttrs.hideChart).toBe(initialTabAttrs.hideChart);
+      expect(revertedTabAttrs.viewMode).toBe(initialTabAttrs.viewMode);
+      expect(revertedTabAttrs.isTextBasedQuery).toBe(initialTabAttrs.isTextBasedQuery);
+      // timeRestore/timeRange are intentionally dropped at the simplified API level
+      expect(revertedTabAttrs.rowHeight).toBe(initialTabAttrs.rowHeight);
+      expect(revertedTabAttrs.headerRowHeight).toBe(initialTabAttrs.headerRowHeight);
+      expect(revertedTabAttrs.kibanaSavedObjectMeta.searchSourceJSON).toBe(
+        initialTabAttrs.kibanaSavedObjectMeta.searchSourceJSON
+      );
+
+      expect(revertedRefs).toEqual(references);
+    });
+
+    it('by-reference: SavedSearch → API → SavedSearch yields semantically identical state', () => {
+      const storedState: StoredSearchEmbeddableByReferenceState = {
+        title: 'By-Ref Session',
+        description: 'Ref description',
+        time_range: { from: 'now-15m', to: 'now' },
+        selectedTabId: 'tab-2',
+        sort: [['_score', 'desc']],
+        columns: ['message'],
+      };
+      const references: SavedObjectReference[] = [
+        { name: SAVED_SEARCH_SAVED_OBJECT_REF_NAME, type: SavedSearchType, id: 'session-ref-1' },
+      ];
+
+      const apiState = byReferenceSavedSearchToDiscoverSessionEmbeddableState(
+        storedState,
+        references
+      );
+      const { state: reverted, references: revertedRefs } =
+        byReferenceDiscoverSessionToSavedSearchEmbeddableState(apiState, []);
+
+      expect(reverted.title).toBe(storedState.title);
+      expect(reverted.description).toBe(storedState.description);
+      expect(reverted.time_range).toEqual(storedState.time_range);
+      expect(reverted.selectedTabId).toBe(storedState.selectedTabId);
+      expect(reverted.sort).toEqual(storedState.sort);
+      expect(reverted.columns).toEqual(storedState.columns);
+      expect(revertedRefs).toEqual(references);
+    });
+  });
+
   describe('fromStoredColumns', () => {
     it('maps column names to column objects without width when grid has no column widths', () => {
       const columns = ['message', '@timestamp'];

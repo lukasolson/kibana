@@ -228,6 +228,7 @@ export function toStoredTab(apiTab: DiscoverSessionTab): {
     hideChart: false,
     isTextBasedQuery: !('dataset' in apiTab),
     kibanaSavedObjectMeta: { searchSourceJSON: JSON.stringify(searchSourceFields) },
+    ...('view_mode' in apiTab && { viewMode: apiTab.view_mode }),
   };
   return { state, references };
 }
