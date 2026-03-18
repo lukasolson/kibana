@@ -170,7 +170,12 @@ export const getSearchEmbeddableFactory = ({
                   Object.keys(searchEmbeddable.comparators).map((k) => [k, 'skip'])
                 )
               : {}),
-            selectedTabId: shouldSkipTabComparators ? 'skip' : 'referenceEquality',
+            selectedTabId: shouldSkipTabComparators
+              ? 'skip'
+              : (last, current) => {
+                  const defaultTabId = tabs[0]?.id;
+                  return (last ?? defaultTabId) === (current ?? defaultTabId);
+                },
             attributes: 'skip',
             breakdownField: 'skip',
             hideAggregatedPreview: 'skip',
