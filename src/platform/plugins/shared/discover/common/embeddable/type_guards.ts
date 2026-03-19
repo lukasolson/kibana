@@ -8,26 +8,31 @@
  */
 
 import type {
-  SearchEmbeddableByReferenceState,
+  DiscoverSessionEmbeddableByReferenceState,
+  DiscoverSessionEmbeddableState,
+} from '../../server';
+import type {
   SearchEmbeddableByValueState,
+  SearchEmbeddablePanelApiState,
   SearchEmbeddableState,
+  StoredSearchEmbeddableByValueState,
   StoredSearchEmbeddableState,
 } from './types';
 
-export function isSearchEmbeddableByReferenceState(
-  state: SearchEmbeddableState | StoredSearchEmbeddableState
-): state is SearchEmbeddableByReferenceState {
-  return 'savedObjectId' in state;
+export function isByReferenceDiscoverSessionEmbeddableState(
+  state: DiscoverSessionEmbeddableState
+): state is DiscoverSessionEmbeddableByReferenceState {
+  return 'discover_session_id' in state;
 }
 
-export function isSearchEmbeddableByValueState(
-  state: StoredSearchEmbeddableState
-): state is SearchEmbeddableByValueState {
+export function isByValueSavedSearchEmbeddableState(
+  state: SearchEmbeddableState | StoredSearchEmbeddableState
+): state is SearchEmbeddableByValueState | StoredSearchEmbeddableByValueState {
   return 'attributes' in state && typeof state.attributes === 'object' && state.attributes !== null;
 }
 
 export function isSearchEmbeddableLegacyPanelState(
-  state: SearchEmbeddableState | StoredSearchEmbeddableState
+  state: SearchEmbeddablePanelApiState
 ): state is SearchEmbeddableState {
-  return isSearchEmbeddableByReferenceState(state) || isSearchEmbeddableByValueState(state);
+  return 'savedObjectId' in state || isByValueSavedSearchEmbeddableState(state);
 }

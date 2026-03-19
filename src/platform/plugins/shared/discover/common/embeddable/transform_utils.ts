@@ -17,9 +17,13 @@ import {
   parseSearchSourceJSON,
 } from '@kbn/data-plugin/common';
 import { fromStoredFilters, toStoredFilters } from '@kbn/as-code-filters-transforms';
-import type { SavedObjectReference } from '@kbn/core-saved-objects-common/src/server_types';
+import type { SavedObjectReference } from '@kbn/core/server';
 import { DataGridDensity } from '@kbn/discover-utils';
 import { isOfAggregateQueryType } from '@kbn/es-query';
+import {
+  isByReferenceDiscoverSessionEmbeddableState,
+  isByValueSavedSearchEmbeddableState,
+} from './type_guards';
 import type {
   DiscoverSessionClassicTab,
   DiscoverSessionDataset,
@@ -31,31 +35,21 @@ import type {
   DiscoverSessionTab,
 } from '../../server';
 import type {
+  SearchEmbeddableByReferenceState,
+  SearchEmbeddableState,
   StoredSearchEmbeddableByReferenceState,
   StoredSearchEmbeddableByValueState,
   StoredSearchEmbeddableState,
 } from './types';
 import { SAVED_SEARCH_SAVED_OBJECT_REF_NAME } from './constants';
 
-export function isByReferenceSavedSearchEmbeddableState(
-  state: StoredSearchEmbeddableState
-): state is StoredSearchEmbeddableByReferenceState {
-  return !('attributes' in state);
-}
-
-export function isByReferenceDiscoverSessionEmbeddableState(
-  state: DiscoverSessionEmbeddableState
-): state is DiscoverSessionEmbeddableByReferenceState {
-  return 'discover_session_id' in state;
-}
-
 export function savedSearchToDiscoverSessionEmbeddableState(
-  storedState: StoredSearchEmbeddableState,
+  storedState: SearchEmbeddableState | StoredSearchEmbeddableState,
   references: SavedObjectReference[] = []
 ): DiscoverSessionEmbeddableState {
-  return isByReferenceSavedSearchEmbeddableState(storedState)
-    ? byReferenceSavedSearchToDiscoverSessionEmbeddableState(storedState, references)
-    : byValueSavedSearchToDiscoverSessionEmbeddableState(storedState, references);
+  return isByValueSavedSearchEmbeddableState(storedState)
+    ? byValueSavedSearchToDiscoverSessionEmbeddableState(storedState, references)
+    : byReferenceSavedSearchToDiscoverSessionEmbeddableState(storedState, references);
 }
 
 export function discoverSessionToSavedSearchEmbeddableState(
@@ -68,13 +62,9 @@ export function discoverSessionToSavedSearchEmbeddableState(
 }
 
 export function byReferenceSavedSearchToDiscoverSessionEmbeddableState(
-  storedState: StoredSearchEmbeddableByReferenceState,
+  storedState: SearchEmbeddableByReferenceState | StoredSearchEmbeddableByReferenceState,
   references: SavedObjectReference[] = []
 ): DiscoverSessionEmbeddableByReferenceState {
-  const savedObjectRef = references.find(
-    (ref) => SavedSearchType === ref.type && ref.name === SAVED_SEARCH_SAVED_OBJECT_REF_NAME
-  );
-  if (!savedObjectRef) throw new Error(`Missing reference of type "${SavedSearchType}"`);
   const {
     sort,
     columns,
@@ -84,12 +74,19 @@ export function byReferenceSavedSearchToDiscoverSessionEmbeddableState(
     headerRowHeight,
     density,
     grid,
+    savedObjectId,
     selectedTabId,
     ...otherAttrs
-  } = storedState;
+  } = {
+    savedObjectId: references.find(
+      (ref) => SavedSearchType === ref.type && ref.name === SAVED_SEARCH_SAVED_OBJECT_REF_NAME
+    )?.id,
+    ...storedState,
+  };
+  if (!savedObjectId) throw new Error(`Missing reference of type "${SavedSearchType}"`);
   return {
     ...otherAttrs,
-    discover_session_id: savedObjectRef.id,
+    discover_session_id: savedObjectId,
     selected_tab_id: selectedTabId,
     overrides: fromStoredSearchEmbeddableState(storedState),
   };

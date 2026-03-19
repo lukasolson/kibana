@@ -21,8 +21,6 @@ import {
   fromStoredSearchEmbeddableState,
   fromStoredSort,
   fromStoredTab,
-  isByReferenceDiscoverSessionEmbeddableState,
-  isByReferenceSavedSearchEmbeddableState,
   savedSearchToDiscoverSessionEmbeddableState,
   toStoredColumns,
   toStoredDataset,
@@ -35,13 +33,13 @@ import {
   toStoredTab,
 } from './transform_utils';
 import type {
+  SearchEmbeddableByReferenceState,
   StoredSearchEmbeddableByReferenceState,
   StoredSearchEmbeddableByValueState,
   StoredSearchEmbeddableState,
 } from './types';
 import { SAVED_SEARCH_SAVED_OBJECT_REF_NAME } from './constants';
-import { SavedSearchType } from '@kbn/saved-search-plugin/common';
-import { VIEW_MODE } from '@kbn/saved-search-plugin/common';
+import { SavedSearchType, VIEW_MODE } from '@kbn/saved-search-plugin/common';
 import type {
   DiscoverSessionEmbeddableByReferenceState,
   DiscoverSessionEmbeddableByValueState,
@@ -57,71 +55,6 @@ import { ASCODE_FILTER_OPERATOR, ASCODE_FILTER_TYPE } from '@kbn/as-code-filters
 describe('search embeddable transform utils', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  describe('isByReferenceSavedSearchEmbeddableState', () => {
-    it('returns true when state has no attributes (by-reference)', () => {
-      const state: StoredSearchEmbeddableByReferenceState = {
-        title: 'My Search',
-        description: 'My description',
-        time_range: { from: 'now-15m', to: 'now' },
-      };
-      expect(isByReferenceSavedSearchEmbeddableState(state)).toBe(true);
-    });
-
-    it('returns false when state has attributes (by-value)', () => {
-      const state = {
-        title: 'My Search',
-        description: 'My description',
-        attributes: {
-          tabs: [],
-          title: '',
-          description: '',
-          sort: [],
-          columns: [],
-          grid: {},
-          hideChart: false,
-          isTextBasedQuery: false,
-          kibanaSavedObjectMeta: { searchSourceJSON: '{}' },
-        },
-      } as unknown as StoredSearchEmbeddableByValueState;
-      expect(isByReferenceSavedSearchEmbeddableState(state)).toBe(false);
-    });
-  });
-
-  describe('isByReferenceDiscoverSessionEmbeddableState', () => {
-    it('returns true when state has discover_session_id', () => {
-      const state: DiscoverSessionEmbeddableByReferenceState = {
-        title: 'My Search',
-        description: 'My description',
-        time_range: { from: 'now-15m', to: 'now' },
-        discover_session_id: 'session-123',
-        selected_tab_id: undefined,
-        overrides: {},
-      };
-      expect(isByReferenceDiscoverSessionEmbeddableState(state)).toBe(true);
-    });
-
-    it('returns false when state has tabs (by-value)', () => {
-      const state: DiscoverSessionEmbeddableByValueState = {
-        title: 'My Search',
-        description: 'My description',
-        tabs: [
-          {
-            columns: [{ name: 'message' }],
-            sort: [],
-            view_mode: VIEW_MODE.DOCUMENT_LEVEL,
-            density: DataGridDensity.COMPACT,
-            header_row_height: 'auto',
-            row_height: 'auto',
-            query: { language: 'kuery', query: '' },
-            filters: [],
-            dataset: { type: 'dataView', id: 'dv-1' },
-          },
-        ],
-      };
-      expect(isByReferenceDiscoverSessionEmbeddableState(state)).toBe(false);
-    });
   });
 
   describe('savedSearchToDiscoverSessionEmbeddableState', () => {
@@ -347,6 +280,110 @@ describe('search embeddable transform utils', () => {
         selected_tab_id: undefined,
         overrides: {},
       });
+    });
+
+    it('puts editable panel fields in overrides (not top-level) and maps selectedTabId to selected_tab_id', () => {
+      const storedSearch: StoredSearchEmbeddableByReferenceState = {
+        title: 'My Saved Search',
+        description: 'My description',
+        time_range: { from: 'now-15m', to: 'now' },
+        selectedTabId: 'tab-active',
+        sort: [['@timestamp', 'desc']],
+        columns: ['message'],
+        rowHeight: -1,
+        sampleSize: 500,
+        rowsPerPage: 100,
+        headerRowHeight: 3,
+        density: DataGridDensity.COMPACT,
+        grid: {
+          columns: {
+            message: { width: 100 },
+          },
+        },
+      };
+      const references: SavedObjectReference[] = [
+        { name: SAVED_SEARCH_SAVED_OBJECT_REF_NAME, type: SavedSearchType, id: 'session-xyz' },
+      ];
+      const result = byReferenceSavedSearchToDiscoverSessionEmbeddableState(
+        storedSearch,
+        references
+      );
+      expect(result).toEqual({
+        title: 'My Saved Search',
+        description: 'My description',
+        time_range: { from: 'now-15m', to: 'now' },
+        discover_session_id: 'session-xyz',
+        selected_tab_id: 'tab-active',
+        overrides: {
+          sort: [{ name: '@timestamp', direction: 'desc' }],
+          columns: [{ name: 'message', width: 100 }],
+          row_height: 'auto',
+          sample_size: 500,
+          rows_per_page: 100,
+          header_row_height: 3,
+          density: DataGridDensity.COMPACT,
+        },
+      });
+      expect(result).not.toHaveProperty('sort');
+      expect(result).not.toHaveProperty('columns');
+      expect(result).not.toHaveProperty('selectedTabId');
+    });
+
+    it('throws when no saved search reference matches type and name', () => {
+      const storedSearch: StoredSearchEmbeddableByReferenceState = {
+        title: 'My Saved Search',
+      };
+      expect(() =>
+        byReferenceSavedSearchToDiscoverSessionEmbeddableState(storedSearch, [])
+      ).toThrow(`Missing reference of type "${SavedSearchType}"`);
+      expect(() =>
+        byReferenceSavedSearchToDiscoverSessionEmbeddableState(storedSearch, [
+          { name: 'wrongRefName', type: SavedSearchType, id: 'id-1' },
+        ])
+      ).toThrow(`Missing reference of type "${SavedSearchType}"`);
+    });
+
+    it('uses the reference that matches SavedSearchType and SAVED_SEARCH_SAVED_OBJECT_REF_NAME', () => {
+      const storedSearch: StoredSearchEmbeddableByReferenceState = {
+        title: 'Panel',
+      };
+      const references: SavedObjectReference[] = [
+        { name: 'kibanaSavedObjectMeta.searchSourceJSON.index', type: 'index-pattern', id: 'dv-1' },
+        { name: SAVED_SEARCH_SAVED_OBJECT_REF_NAME, type: SavedSearchType, id: 'session-picked' },
+      ];
+      const result = byReferenceSavedSearchToDiscoverSessionEmbeddableState(
+        storedSearch,
+        references
+      );
+      expect(result.discover_session_id).toBe('session-picked');
+    });
+
+    it('uses savedObjectId on state when present so a saved search reference is not required', () => {
+      const storedSearch: SearchEmbeddableByReferenceState = {
+        title: 'Runtime / API state',
+        savedObjectId: 'session-without-ref-array',
+      };
+      const result = byReferenceSavedSearchToDiscoverSessionEmbeddableState(storedSearch, []);
+      expect(result.discover_session_id).toBe('session-without-ref-array');
+    });
+
+    it('prefers savedObjectId on state over the matching saved search reference', () => {
+      const storedSearch: SearchEmbeddableByReferenceState = {
+        title: 'Panel',
+        savedObjectId: 'id-from-state',
+      };
+      const references: SavedObjectReference[] = [
+        {
+          name: SAVED_SEARCH_SAVED_OBJECT_REF_NAME,
+          type: SavedSearchType,
+          id: 'id-from-reference',
+        },
+      ];
+      const result = byReferenceSavedSearchToDiscoverSessionEmbeddableState(
+        storedSearch,
+        references
+      );
+      expect(result.discover_session_id).toBe('id-from-state');
     });
   });
 

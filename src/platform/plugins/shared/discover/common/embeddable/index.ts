@@ -11,9 +11,15 @@ export {
   getSearchEmbeddableTransforms,
   type SearchEmbeddablePanelApiState,
 } from './search_embeddable_transforms';
-export { isSearchEmbeddableLegacyPanelState } from './type_guards';
 export {
-  discoverSessionToSavedSearchEmbeddableState,
   isByReferenceDiscoverSessionEmbeddableState,
-  isByReferenceSavedSearchEmbeddableState,
+  isSearchEmbeddableLegacyPanelState,
+} from './type_guards';
+export {
+  byReferenceSavedSearchToDiscoverSessionEmbeddableState,
+  byValueDiscoverSessionToSavedSearchEmbeddableState,
+  byValueSavedSearchToDiscoverSessionEmbeddableState,
+  discoverSessionToSavedSearchEmbeddableState,
+  savedSearchToDiscoverSessionEmbeddableState,
+  toStoredSearchEmbeddableState,
 } from './transform_utils';

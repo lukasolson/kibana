@@ -15,12 +15,11 @@ import { transformTimeRangeOut, transformTitlesOut } from '@kbn/presentation-pub
 import { extractTabs, SavedSearchType } from '@kbn/saved-search-plugin/common';
 import { SAVED_SEARCH_SAVED_OBJECT_REF_NAME } from './constants';
 import type {
-  SearchEmbeddableByReferenceState,
-  SearchEmbeddableByValueState,
   SearchEmbeddablePanelApiState,
+  SearchEmbeddableState,
   StoredSearchEmbeddableState,
 } from './types';
-import { isSearchEmbeddableByValueState } from './type_guards';
+import { isByValueSavedSearchEmbeddableState } from './type_guards';
 import { savedSearchToDiscoverSessionEmbeddableState } from './transform_utils';
 
 export function getTransformOut(
@@ -46,8 +45,8 @@ export function getTransformOut(
 function legacyTransformOut(
   state: StoredSearchEmbeddableState,
   references: SavedObjectReference[] | undefined
-): SearchEmbeddableByReferenceState | SearchEmbeddableByValueState {
-  if (isSearchEmbeddableByValueState(state)) {
+): SearchEmbeddableState {
+  if (isByValueSavedSearchEmbeddableState(state)) {
     const tabsState = { ...state, attributes: extractTabs(state.attributes) };
     const tabs = tabsState.attributes.tabs.map((tab) => {
       try {
@@ -76,14 +75,15 @@ function legacyTransformOut(
         ...state.attributes,
         tabs,
       },
-    } as SearchEmbeddableByValueState;
+    };
   }
 
   const savedObjectRef = (references ?? []).find(
     (ref) => SavedSearchType === ref.type && ref.name === SAVED_SEARCH_SAVED_OBJECT_REF_NAME
   );
+  if (!savedObjectRef) throw new Error(`Missing reference of type "${SavedSearchType}"`);
   return {
     ...state,
-    ...(savedObjectRef?.id ? { savedObjectId: savedObjectRef.id } : {}),
-  } as SearchEmbeddableByReferenceState;
+    savedObjectId: savedObjectRef.id,
+  };
 }

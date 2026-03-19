@@ -25,5 +25,4 @@ export type { NonPersistedDisplayOptions, SearchEmbeddableState } from './embedd
 export {
   discoverSessionToSavedSearchEmbeddableState,
   isByReferenceDiscoverSessionEmbeddableState,
-  isByReferenceSavedSearchEmbeddableState,
 } from './embeddable';
