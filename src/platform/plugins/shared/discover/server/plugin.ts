@@ -7,7 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-import type { CoreSetup, CoreStart, Plugin } from '@kbn/core/server';
+import type { CoreSetup, CoreStart, Logger, Plugin } from '@kbn/core/server';
 import type { PluginSetup as DataPluginSetup } from '@kbn/data-plugin/server';
 import type { EmbeddableSetup } from '@kbn/embeddable-plugin/server';
 import type { HomeServerPluginSetup } from '@kbn/home-plugin/server';
@@ -35,9 +35,11 @@ export class DiscoverServerPlugin
   implements Plugin<object, DiscoverServerPluginStart, object, DiscoverServerPluginStartDeps>
 {
   private readonly config: ConfigSchema;
+  private readonly logger: Logger;
 
   constructor(initializerContext: PluginInitializerContext<ConfigSchema>) {
     this.config = initializerContext.config.get();
+    this.logger = initializerContext.logger.get();
   }
 
   public setup(
@@ -66,13 +68,18 @@ export class DiscoverServerPlugin
     }
 
     let embeddableTransformsEnabled = false;
-    core.getStartServices().then(([{ featureFlags }]) => {
-      featureFlags
-        .getBooleanValue$(EMBEDDABLE_TRANSFORMS_FEATURE_FLAG_KEY, embeddableTransformsEnabled)
-        .subscribe((value) => {
-          embeddableTransformsEnabled = value;
-        });
-    });
+    core
+      .getStartServices()
+      .then(([{ featureFlags }]) => {
+        featureFlags
+          .getBooleanValue$(EMBEDDABLE_TRANSFORMS_FEATURE_FLAG_KEY, embeddableTransformsEnabled)
+          .subscribe((value) => {
+            embeddableTransformsEnabled = value;
+          });
+      })
+      .catch((error) => {
+        this.logger.error(error);
+      });
     plugins.embeddable.registerEmbeddableFactory(createSearchEmbeddableFactory());
     plugins.embeddable.registerTransforms(SEARCH_EMBEDDABLE_TYPE, {
       getTransforms: (drilldownTransforms) =>

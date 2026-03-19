@@ -24,7 +24,11 @@ import type { AggregateQuery, Filter, Query, TimeRange } from '@kbn/es-query';
 import { createDataViewDataSource } from '../../common/data_sources';
 import { discoverServiceMock } from '../__mocks__/services';
 import { getSearchEmbeddableFactory } from './get_search_embeddable_factory';
-import type { SearchEmbeddableApi, SearchEmbeddableRuntimeState } from './types';
+import type {
+  SearchEmbeddableApi,
+  SearchEmbeddablePanelApiState,
+  SearchEmbeddableRuntimeState,
+} from './types';
 import { SolutionType } from '../context_awareness';
 import { mockInitializeDrilldownsManager } from '@kbn/embeddable-plugin/public/mocks';
 import { renderWithI18n } from '@kbn/test-jest-helpers';
@@ -147,7 +151,7 @@ describe('saved search embeddable', () => {
       runtimeState = getInitialRuntimeState({ searchMock: search });
       const { Component, api } = await factory.buildEmbeddable({
         initializeDrilldownsManager: mockInitializeDrilldownsManager,
-        initialState: { discover_session_id: 'id' }, // runtimeState passed via mocked deserializeState
+        initialState: { discover_session_id: 'id' } as SearchEmbeddablePanelApiState, // runtimeState passed via mocked deserializeState
         finalizeApi: finalizeApiMock,
         uuid,
         parentApi: mockedDashboardApi,
@@ -182,7 +186,7 @@ describe('saved search embeddable', () => {
 
       const { Component, api } = await factory.buildEmbeddable({
         initializeDrilldownsManager: mockInitializeDrilldownsManager,
-        initialState: { discover_session_id: 'id' }, // runtimeState passed via mocked deserializeState
+        initialState: { discover_session_id: 'id' } as SearchEmbeddablePanelApiState, // runtimeState passed via mocked deserializeState
         finalizeApi: finalizeApiMock,
         uuid,
         parentApi: mockedDashboardApi,
@@ -264,7 +268,7 @@ describe('saved search embeddable', () => {
       });
       const { api } = await factory.buildEmbeddable({
         initializeDrilldownsManager: mockInitializeDrilldownsManager,
-        initialState: { discover_session_id: 'id' }, // runtimeState passed via mocked deserializeState
+        initialState: { discover_session_id: 'id' } as SearchEmbeddablePanelApiState, // runtimeState passed via mocked deserializeState
         finalizeApi: finalizeApiMock,
         uuid,
         parentApi: mockedDashboardApi,
@@ -361,7 +365,7 @@ describe('saved search embeddable', () => {
       runtimeState = getInitialRuntimeState();
       await factory.buildEmbeddable({
         initializeDrilldownsManager: mockInitializeDrilldownsManager,
-        initialState: { discover_session_id: 'id' }, // runtimeState passed via mocked deserializeState
+        initialState: { discover_session_id: 'id' } as SearchEmbeddablePanelApiState, // runtimeState passed via mocked deserializeState
         finalizeApi: finalizeApiMock,
         uuid,
         parentApi: mockedDashboardApi,
@@ -386,7 +390,7 @@ describe('saved search embeddable', () => {
       };
       await factory.buildEmbeddable({
         initializeDrilldownsManager: mockInitializeDrilldownsManager,
-        initialState: { discover_session_id: 'id' }, // runtimeState passed via mocked deserializeState
+        initialState: { discover_session_id: 'id' } as SearchEmbeddablePanelApiState, // runtimeState passed via mocked deserializeState
         finalizeApi: finalizeApiMock,
         uuid,
         parentApi: mockedDashboardApi,
@@ -413,7 +417,7 @@ describe('saved search embeddable', () => {
       runtimeState = getInitialRuntimeState();
       const { api } = await factory.buildEmbeddable({
         initializeDrilldownsManager: mockInitializeDrilldownsManager,
-        initialState: { discover_session_id: 'id' }, // runtimeState passed via mocked deserializeState
+        initialState: { discover_session_id: 'id' } as SearchEmbeddablePanelApiState, // runtimeState passed via mocked deserializeState
         finalizeApi: finalizeApiMock,
         uuid,
         parentApi: mockedDashboardApi,
@@ -446,7 +450,7 @@ describe('saved search embeddable', () => {
       });
       const { Component, api } = await factory.buildEmbeddable({
         initializeDrilldownsManager: mockInitializeDrilldownsManager,
-        initialState: { discover_session_id: 'id' }, // runtimeState passed via mocked deserializeState
+        initialState: { discover_session_id: 'id' } as SearchEmbeddablePanelApiState, // runtimeState passed via mocked deserializeState
         finalizeApi: finalizeApiMock,
         uuid,
         parentApi: mockedDashboardApi,
