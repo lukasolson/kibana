@@ -107,6 +107,7 @@ export type SearchEmbeddableApi = DefaultEmbeddableApi<SearchEmbeddablePanelApiS
   HasLibraryTransforms &
   HasTimeRange &
   HasInspectorAdapters &
+  PublishesSelectedTabId &
   Partial<HasEditCapabilities & PublishesSavedObjectId> &
   Partial<CanOverrideHoverActions> &
   HasDrilldowns &
@@ -126,6 +127,15 @@ export const apiPublishesSavedSearch = (
   const embeddable = api as PublishesSavedSearch;
   return Boolean(embeddable.savedSearch$);
 };
+
+/**
+ * Interface for publishing the selected tab ID
+ * @interface PublishesSelectedTabId
+ * @property {() => string | undefined} getSelectedTabId - Returns the ID of the selected tab
+ */
+export interface PublishesSelectedTabId {
+  getSelectedTabId: () => string | undefined;
+}
 
 export interface HasTimeRange {
   hasTimeRange(): boolean;
