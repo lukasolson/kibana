@@ -11,9 +11,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { debounceTime, distinctUntilChanged, map } from 'rxjs';
 import { isEqual } from 'lodash';
 import { EmbeddableRenderer } from '@kbn/embeddable-plugin/public';
-import { getDefaultSort } from '@kbn/discover-utils';
+import { SEARCH_EMBEDDABLE_TYPE, getDefaultSort } from '@kbn/discover-utils';
 import {
-  SEARCH_EMBEDDABLE_TYPE,
   type SearchEmbeddableApi,
   type SearchEmbeddablePanelApiState,
 } from '@kbn/discover-plugin/public';
