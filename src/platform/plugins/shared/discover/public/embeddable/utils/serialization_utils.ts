@@ -22,11 +22,11 @@ import {
   byReferenceSavedSearchToDiscoverSessionEmbeddableState,
   byValueDiscoverSessionToSavedSearchEmbeddableState,
   byValueSavedSearchToDiscoverSessionEmbeddableState,
+  isByReferenceDiscoverSessionEmbeddableState,
   isSearchEmbeddableLegacyPanelState,
   savedSearchToDiscoverSessionEmbeddableState,
   toStoredSearchEmbeddableState,
 } from '../../../common/embeddable';
-import { isByReferenceDiscoverSessionEmbeddableState } from '../../../common';
 import { EDITABLE_SAVED_SEARCH_KEYS } from '../../../common/embeddable/constants';
 import type { DiscoverServices } from '../../build_services';
 import { EDITABLE_PANEL_KEYS } from '../constants';
