@@ -130,6 +130,8 @@
     "@kbn/scout",
     "@kbn/synthtrace-client",
     "@kbn/cps-utils",
+    "@kbn/core-saved-objects-common",
+    "@kbn/as-code-filters-constants",
   ],
   "exclude": ["target/**/*"]
 }
