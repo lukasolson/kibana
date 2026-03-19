@@ -13,3 +13,5 @@ export const SEARCH_SESSION_ID_QUERY_PARAM = 'searchSessionId';
 
 export const CASCADE_LAYOUT_ENABLED_FEATURE_FLAG_KEY = 'discover.cascadeLayoutEnabled';
 export const IS_ESQL_DEFAULT_FEATURE_FLAG_KEY = 'discover.isEsqlDefault';
+
+export { EMBEDDABLE_TRANSFORMS_FEATURE_FLAG_KEY } from '../common';

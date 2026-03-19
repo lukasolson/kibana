@@ -9,7 +9,11 @@
 
 import type { DrilldownTransforms } from '@kbn/embeddable-plugin/common';
 import { getSearchEmbeddableTransforms } from './search_embeddable_transforms';
-import type { StoredSearchEmbeddableByValueState, StoredSearchEmbeddableState } from './types';
+import type {
+  SearchEmbeddableState,
+  StoredSearchEmbeddableByValueState,
+  StoredSearchEmbeddableState,
+} from './types';
 import type {
   DiscoverSessionClassicTab,
   DiscoverSessionEmbeddableByReferenceState,
@@ -34,6 +38,9 @@ describe('searchEmbeddableTransforms', () => {
     jest.clearAllMocks();
   });
 
+  const whenEnabled = () => true;
+  const whenDisabled = () => false;
+
   describe('transformOut', () => {
     it('converts by-reference stored state to DiscoverSession API shape', () => {
       const state: StoredSearchEmbeddableState = {
@@ -44,10 +51,10 @@ describe('searchEmbeddableTransforms', () => {
       const references = [
         { name: SAVED_SEARCH_SAVED_OBJECT_REF_NAME, type: SavedSearchType, id: 'session-123' },
       ];
-      const result = getSearchEmbeddableTransforms(mockDrilldownTransforms).transformOut?.(
-        state,
-        references
-      );
+      const result = getSearchEmbeddableTransforms(
+        mockDrilldownTransforms,
+        whenEnabled
+      ).transformOut?.(state, references);
       expect(result).toEqual({
         title: 'Test Title',
         description: 'Test Description',
@@ -107,10 +114,10 @@ describe('searchEmbeddableTransforms', () => {
           id: 'data-view-1',
         },
       ];
-      const result = getSearchEmbeddableTransforms(mockDrilldownTransforms).transformOut?.(
-        state,
-        references
-      ) as DiscoverSessionEmbeddableByValueState;
+      const result = getSearchEmbeddableTransforms(
+        mockDrilldownTransforms,
+        whenEnabled
+      ).transformOut?.(state, references) as DiscoverSessionEmbeddableByValueState;
       expect(result.title).toBe('Panel Title');
       expect(result.description).toBe('Panel description');
       expect(result.tabs).toHaveLength(1);
@@ -143,10 +150,10 @@ describe('searchEmbeddableTransforms', () => {
       const mockReferences = [
         { name: SAVED_SEARCH_SAVED_OBJECT_REF_NAME, type: SavedSearchType, id: 'session-xyz' },
       ];
-      const result = getSearchEmbeddableTransforms(mockDrilldownTransforms).transformOut?.(
-        state,
-        mockReferences
-      );
+      const result = getSearchEmbeddableTransforms(
+        mockDrilldownTransforms,
+        whenEnabled
+      ).transformOut?.(state, mockReferences);
       expect(mockDrilldownTransforms.transformOut).toHaveBeenCalledWith(state, mockReferences);
       expect(result).toMatchObject({
         title: 'Test Title',
@@ -168,8 +175,8 @@ describe('searchEmbeddableTransforms', () => {
           overrides: {},
         };
 
-        const result =
-          getSearchEmbeddableTransforms(mockDrilldownTransforms).transformIn!(apiState);
+        const result = getSearchEmbeddableTransforms(mockDrilldownTransforms, whenEnabled)
+          .transformIn!(apiState);
 
         expect(result.state).toEqual({
           title: 'Test Search',
@@ -197,8 +204,8 @@ describe('searchEmbeddableTransforms', () => {
           overrides: {},
         };
 
-        const result =
-          getSearchEmbeddableTransforms(mockDrilldownTransforms).transformIn!(apiState);
+        const result = getSearchEmbeddableTransforms(mockDrilldownTransforms, whenEnabled)
+          .transformIn!(apiState);
 
         expect(result.state).toEqual({
           title: 'My Search',
@@ -239,8 +246,8 @@ describe('searchEmbeddableTransforms', () => {
           ],
         };
 
-        const result =
-          getSearchEmbeddableTransforms(mockDrilldownTransforms).transformIn!(apiState);
+        const result = getSearchEmbeddableTransforms(mockDrilldownTransforms, whenEnabled)
+          .transformIn!(apiState);
 
         expect(result.references).toContainEqual({
           id: 'data-view-1',
@@ -277,13 +284,54 @@ describe('searchEmbeddableTransforms', () => {
           ],
         };
 
-        const result =
-          getSearchEmbeddableTransforms(mockDrilldownTransforms).transformIn!(apiState);
+        const result = getSearchEmbeddableTransforms(mockDrilldownTransforms, whenEnabled)
+          .transformIn!(apiState);
 
         expect(result.references).toContainEqual(dataViewRef);
         expect((result.state as StoredSearchEmbeddableByValueState).attributes).not.toHaveProperty(
           'references'
         );
+      });
+    });
+  });
+
+  describe('when feature flag is disabled (legacy main behavior)', () => {
+    it('transformIn runs legacy transform: extracts savedObjectId to reference (by-ref)', () => {
+      const apiState: SearchEmbeddableState = {
+        title: 'Title',
+        savedObjectId: 'session-1',
+      };
+      const result = getSearchEmbeddableTransforms(mockDrilldownTransforms, whenDisabled)
+        .transformIn!(apiState);
+      expect(mockDrilldownTransforms.transformIn).toHaveBeenCalledWith(apiState);
+      expect(result.state).not.toHaveProperty('savedObjectId');
+      expect(result.references).toContainEqual({
+        name: SAVED_SEARCH_SAVED_OBJECT_REF_NAME,
+        type: SavedSearchType,
+        id: 'session-1',
+      });
+    });
+
+    it('transformOut runs legacy transform: injects savedObjectId from references (by-ref)', () => {
+      const storedState: StoredSearchEmbeddableState = {
+        title: 'Title',
+        description: 'Description',
+        time_range: { from: 'now-15m', to: 'now' },
+      };
+      const references = [
+        { name: SAVED_SEARCH_SAVED_OBJECT_REF_NAME, type: SavedSearchType, id: 'session-1' },
+      ];
+      const result = getSearchEmbeddableTransforms(
+        mockDrilldownTransforms,
+        whenDisabled
+      ).transformOut?.(storedState, references);
+      expect(mockDrilldownTransforms.transformOut).toHaveBeenCalledWith(
+        expect.anything(),
+        references
+      );
+      expect(result).toMatchObject({
+        title: 'Title',
+        savedObjectId: 'session-1',
       });
     });
   });

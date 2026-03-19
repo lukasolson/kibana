@@ -25,6 +25,7 @@ import { getUiSettings } from './ui_settings';
 import type { ConfigSchema } from './config';
 import { appLocatorGetLocationCommon } from '../common/app_locator_get_location';
 import {
+  EMBEDDABLE_TRANSFORMS_FEATURE_FLAG_KEY,
   METRICS_EXPERIENCE_PRODUCT_FEATURE_ID,
   TRACES_PRODUCT_FEATURE_ID,
 } from '../common/constants';
@@ -64,9 +65,18 @@ export class DiscoverServerPlugin
       });
     }
 
+    let embeddableTransformsEnabled = false;
+    core.getStartServices().then(([{ featureFlags }]) => {
+      featureFlags
+        .getBooleanValue$(EMBEDDABLE_TRANSFORMS_FEATURE_FLAG_KEY, embeddableTransformsEnabled)
+        .subscribe((value) => {
+          embeddableTransformsEnabled = value;
+        });
+    });
     plugins.embeddable.registerEmbeddableFactory(createSearchEmbeddableFactory());
     plugins.embeddable.registerTransforms(SEARCH_EMBEDDABLE_TYPE, {
-      getTransforms: getSearchEmbeddableTransforms,
+      getTransforms: (drilldownTransforms) =>
+        getSearchEmbeddableTransforms(drilldownTransforms, () => embeddableTransformsEnabled),
     });
 
     core.pricing.registerProductFeatures([

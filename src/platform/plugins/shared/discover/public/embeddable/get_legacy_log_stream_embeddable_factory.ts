@@ -7,8 +7,6 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-import { DataGridDensity } from '@kbn/discover-utils';
-import { VIEW_MODE } from '@kbn/saved-search-plugin/common';
 import type { DiscoverSessionEmbeddableState } from '../../server';
 import { getSearchEmbeddableFactory } from './get_search_embeddable_factory';
 import { LEGACY_LOG_STREAM_EMBEDDABLE } from './constants';
@@ -20,7 +18,7 @@ export const getLegacyLogStreamEmbeddableFactory = (
   const logStreamEmbeddableFactory: ReturnType<typeof getSearchEmbeddableFactory> = {
     type: LEGACY_LOG_STREAM_EMBEDDABLE,
     buildEmbeddable: async ({ initialState: logsInitialState, ...restParams }) => {
-      const initialState: DiscoverSessionEmbeddableState = {
+      const initialState = {
         ...logsInitialState,
         tabs: [
           {
@@ -31,14 +29,9 @@ export const getLegacyLogStreamEmbeddableFactory = (
                 : 'logs-*-*',
               time_field: '@timestamp',
             },
-            sort: [],
-            density: DataGridDensity.COMPACT,
-            header_row_height: 3,
-            filters: [],
-            view_mode: VIEW_MODE.DOCUMENT_LEVEL,
           },
         ],
-      };
+      } as DiscoverSessionEmbeddableState;
       return searchEmbeddableFactory.buildEmbeddable({ initialState, ...restParams });
     },
   };

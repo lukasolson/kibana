@@ -7,7 +7,11 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-export { getSearchEmbeddableTransforms } from './search_embeddable_transforms';
+export {
+  getSearchEmbeddableTransforms,
+  type SearchEmbeddablePanelApiState,
+} from './search_embeddable_transforms';
+export { isSearchEmbeddableLegacyPanelState } from './type_guards';
 export {
   discoverSessionToSavedSearchEmbeddableState,
   isByReferenceDiscoverSessionEmbeddableState,

@@ -8,21 +8,87 @@
  */
 
 import type { SavedObjectReference } from '@kbn/core/server';
+import { extractReferences, parseSearchSourceJSON } from '@kbn/data-plugin/common';
 import type { DrilldownTransforms } from '@kbn/embeddable-plugin/common';
+import { SavedSearchType } from '@kbn/saved-search-plugin/common';
+import { SAVED_SEARCH_SAVED_OBJECT_REF_NAME } from './constants';
+import {
+  isSearchEmbeddableByReferenceState,
+  isSearchEmbeddableLegacyPanelState,
+} from './type_guards';
 import { discoverSessionToSavedSearchEmbeddableState } from './transform_utils';
-import type { DiscoverSessionEmbeddableState } from '../../server';
-import type { StoredSearchEmbeddableState } from './types';
+import type {
+  SearchEmbeddablePanelApiState,
+  SearchEmbeddableState,
+  StoredSearchEmbeddableState,
+} from './types';
 
 export { SAVED_SEARCH_SAVED_OBJECT_REF_NAME } from './constants';
 
 export function getTransformIn(transformDrilldownsIn: DrilldownTransforms['transformIn']) {
-  return function transformIn(state: DiscoverSessionEmbeddableState): {
+  return function transformIn(apiState: SearchEmbeddablePanelApiState): {
     state: StoredSearchEmbeddableState;
     references: SavedObjectReference[];
   } {
-    const { state: storedState, references: drilldownReferences } =
-      transformDrilldownsIn<DiscoverSessionEmbeddableState>(state);
+    const { state, references } = transformDrilldownsIn(apiState);
+    return isSearchEmbeddableLegacyPanelState(state)
+      ? legacyTransformIn(state, references)
+      : discoverSessionToSavedSearchEmbeddableState(state, references);
+  };
+}
 
-    return discoverSessionToSavedSearchEmbeddableState(storedState, drilldownReferences);
+function legacyTransformIn(
+  storedState: SearchEmbeddableState,
+  drilldownReferences: SavedObjectReference[] = []
+): { state: StoredSearchEmbeddableState; references: SavedObjectReference[] } {
+  if (isSearchEmbeddableByReferenceState(storedState)) {
+    const { savedObjectId, ...rest } = storedState;
+    return {
+      state: rest,
+      references: [
+        {
+          name: SAVED_SEARCH_SAVED_OBJECT_REF_NAME,
+          type: SavedSearchType,
+          id: savedObjectId,
+        },
+        ...drilldownReferences,
+      ],
+    };
+  }
+
+  // by value
+  const tabReferences: SavedObjectReference[] = [];
+  const tabs = storedState.attributes.tabs.map((tab) => {
+    try {
+      const searchSourceValues = parseSearchSourceJSON(
+        tab.attributes.kibanaSavedObjectMeta.searchSourceJSON
+      );
+      const [searchSourceFields, searchSourceReferences] = extractReferences(searchSourceValues);
+      tabReferences.push(...searchSourceReferences);
+      return {
+        ...tab,
+        attributes: {
+          ...tab.attributes,
+          kibanaSavedObjectMeta: {
+            ...tab.attributes.kibanaSavedObjectMeta,
+            searchSourceJSON: JSON.stringify(searchSourceFields),
+          },
+        },
+      };
+    } catch (e) {
+      return tab;
+    }
+  });
+
+  const { references = [], ...otherAttrs } = storedState.attributes;
+  return {
+    state: {
+      ...storedState,
+      attributes: {
+        ...otherAttrs,
+        tabs,
+      },
+    },
+    references: [...references, ...tabReferences, ...drilldownReferences],
   };
 }

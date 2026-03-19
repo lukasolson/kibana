@@ -36,17 +36,19 @@ import type { DataTableColumnsMeta } from '@kbn/unified-data-table';
 import type { BehaviorSubject } from 'rxjs';
 import type { PublishesWritableDataViews } from '@kbn/presentation-publishing/interfaces/publishes_data_views';
 import type { SerializedDrilldowns } from '@kbn/embeddable-plugin/server';
-import type { DiscoverSessionEmbeddableState } from '../../server';
 import type {
   NonPersistedDisplayOptions,
+  SearchEmbeddablePanelApiState,
 } from '../../common/embeddable/types';
+
+export type { SearchEmbeddablePanelApiState };
 
 /**
  * Input state accepted by the search embeddable factory. Extends the persisted
  * session state with optional display options passed by solutions (e.g. APM, Infra)
  * when using SavedSearchComponent outside of dashboards. These options are not persisted.
  */
-export type SearchEmbeddableInputState = DiscoverSessionEmbeddableState & {
+export type SearchEmbeddableInputState = SearchEmbeddablePanelApiState & {
   nonPersistedDisplayOptions?: NonPersistedDisplayOptions;
 };
 
@@ -92,7 +94,7 @@ export type SearchEmbeddableRuntimeState = SearchEmbeddableSerializedAttributes 
     tabs?: DiscoverSessionTab[];
   };
 
-export type SearchEmbeddableApi = DefaultEmbeddableApi<DiscoverSessionEmbeddableState> &
+export type SearchEmbeddableApi = DefaultEmbeddableApi<SearchEmbeddablePanelApiState> &
   PublishesSavedObjectId &
   PublishesDataLoading &
   PublishesBlockingError &
