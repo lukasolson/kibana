@@ -111,7 +111,6 @@
     "@kbn/file-upload-plugin",
     "@kbn/timerange",
     "@kbn/unified-chart-section-viewer",
-    "@kbn/shared-ux-link-redirect-app",
     "@kbn/control-group-renderer",
     "@kbn/react-query",
     "@kbn/shared-ux-document-data-cascade",
@@ -128,10 +127,12 @@
     "@kbn/as-code-filters-schema",
     "@kbn/as-code-filters-transforms",
     "@kbn/scout",
+    "@kbn/scout-synthtrace",
     "@kbn/synthtrace-client",
     "@kbn/cps-utils",
     "@kbn/core-saved-objects-common",
     "@kbn/as-code-filters-constants",
+    "@kbn/as-code-data-views-schema",
   ],
   "exclude": ["target/**/*"]
 }
