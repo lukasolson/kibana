@@ -85,7 +85,10 @@ export class DiscoverServerPlugin
     plugins.embeddable.registerTransforms(SEARCH_EMBEDDABLE_TYPE, {
       getTransforms: (drilldownTransforms) =>
         getSearchEmbeddableTransforms(drilldownTransforms, () => embeddableTransformsEnabled),
-      getSchema: (getDrilldownsSchema) => getDiscoverSessionEmbeddableSchema(getDrilldownsSchema),
+      getSchema: (getDrilldownsSchema) =>
+        embeddableTransformsEnabled
+          ? getDiscoverSessionEmbeddableSchema(getDrilldownsSchema)
+          : undefined,
     });
 
     core.pricing.registerProductFeatures([
