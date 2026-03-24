@@ -48,7 +48,10 @@ export function savedSearchToDiscoverSessionEmbeddableState(
   references: SavedObjectReference[] = []
 ): DiscoverSessionEmbeddableState {
   return isByValueSavedSearchEmbeddableState(storedState)
-    ? byValueSavedSearchToDiscoverSessionEmbeddableState(storedState, references)
+    ? byValueSavedSearchToDiscoverSessionEmbeddableState(storedState, [
+        ...references,
+        ...(storedState.attributes.references ?? []),
+      ])
     : byReferenceSavedSearchToDiscoverSessionEmbeddableState(storedState, references);
 }
 

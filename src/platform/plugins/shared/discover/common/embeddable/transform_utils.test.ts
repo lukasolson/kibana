@@ -124,6 +124,59 @@ describe('search embeddable transform utils', () => {
       expect('tabs' in result && Array.isArray(result.tabs)).toBe(true);
       expect('tabs' in result && result.tabs.length).toBe(1);
     });
+
+    it('merges attributes.references when converting by-value legacy state (embedded save and return)', () => {
+      const dataViewId = 'dv-from-embedded-editor';
+      const indexRefName = 'kibanaSavedObjectMeta.searchSourceJSON.index';
+      const searchSourceWithRef = JSON.stringify({
+        query: { language: 'kuery', query: '' },
+        filter: [],
+        indexRefName,
+      });
+      const storedState = {
+        title: 'Panel from Discover',
+        description: '',
+        attributes: {
+          title: '',
+          sort: [['@timestamp', 'desc']],
+          columns: ['message'],
+          grid: {},
+          hideChart: false,
+          viewMode: VIEW_MODE.DOCUMENT_LEVEL,
+          isTextBasedQuery: false,
+          timeRestore: false,
+          kibanaSavedObjectMeta: {
+            searchSourceJSON: searchSourceWithRef,
+          },
+          references: [{ name: indexRefName, type: 'index-pattern', id: dataViewId }],
+          tabs: [
+            {
+              id: 'tab-1',
+              label: 'Tab 1',
+              attributes: {
+                sort: [['@timestamp', 'desc']],
+                columns: ['message'],
+                grid: {},
+                hideChart: false,
+                viewMode: VIEW_MODE.DOCUMENT_LEVEL,
+                isTextBasedQuery: false,
+                timeRestore: false,
+                kibanaSavedObjectMeta: {
+                  searchSourceJSON: searchSourceWithRef,
+                },
+              },
+            },
+          ],
+        },
+      } as StoredSearchEmbeddableByValueState;
+
+      const result = savedSearchToDiscoverSessionEmbeddableState(storedState);
+
+      expect('tabs' in result && result.tabs).toBeDefined();
+      expect('tabs' in result && result.tabs?.[0]).toMatchObject({
+        dataset: { type: 'dataView', id: dataViewId },
+      });
+    });
   });
 
   describe('discoverSessionToSavedSearchEmbeddableState', () => {
