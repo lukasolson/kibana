@@ -7,7 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-import type { TypeOf } from '@kbn/config-schema';
+import type { ObjectType, Props, TypeOf } from '@kbn/config-schema';
 import { schema } from '@kbn/config-schema';
 import { DataGridDensity } from '@kbn/discover-utils';
 import { aggregateQuerySchema, querySchema } from '@kbn/es-query-server';
@@ -17,7 +17,8 @@ import {
 } from '@kbn/presentation-publishing-schemas';
 import { VIEW_MODE } from '@kbn/saved-search-plugin/common';
 import { asCodeFilterSchema } from '@kbn/as-code-filters-schema';
-import type { SerializedDrilldowns } from '@kbn/embeddable-plugin/server';
+import type { GetDrilldownsSchemaFnType } from '@kbn/embeddable-plugin/server';
+import { ON_OPEN_PANEL_MENU } from '@kbn/ui-actions-plugin/common/trigger_ids';
 
 const columnSchema = schema.object({
   name: schema.string({
@@ -426,9 +427,23 @@ const esqlTabSchema = schema.allOf([
 
 const tabSchema = schema.oneOf([classicTabSchema, esqlTabSchema]);
 
-const discoverSessionByValueEmbeddableSchema = schema.allOf([
-  serializedTitlesSchema,
-  serializedTimeRangeSchema,
+const DISCOVER_SUPPORTED_DRILLDOWN_TRIGGERS = [ON_OPEN_PANEL_MENU];
+
+/**
+ * Intersects embeddable-only props with panel-level schemas normally merged by the host
+ * (e.g. dashboard): serialized titles, time range, and drilldowns.
+ */
+function withPanelSchemas<P extends Props>(embeddableSchema: ObjectType<P>) {
+  return (getDrilldownsSchema: GetDrilldownsSchemaFnType) =>
+    schema.allOf([
+      serializedTitlesSchema,
+      serializedTimeRangeSchema,
+      getDrilldownsSchema(DISCOVER_SUPPORTED_DRILLDOWN_TRIGGERS),
+      embeddableSchema,
+    ]);
+}
+
+const getDiscoverSessionByValueEmbeddableSchema = withPanelSchemas(
   schema.object({
     tabs: schema.arrayOf(tabSchema, {
       minSize: 1,
@@ -438,12 +453,10 @@ const discoverSessionByValueEmbeddableSchema = schema.allOf([
           'Inline tab configuration. Used when no `discover_session_id` is set. Panel-level fields (e.g. `columns`, `sort`) override these when provided. Currently supports one tab.',
       },
     }),
-  }),
-]);
+  })
+);
 
-const discoverSessionByReferenceEmbeddableSchema = schema.allOf([
-  serializedTitlesSchema,
-  serializedTimeRangeSchema,
+const getDiscoverSessionByReferenceEmbeddableSchema = withPanelSchemas(
   schema.object({
     discover_session_id: schema.string(),
     selected_tab_id: schema.maybe(
@@ -455,13 +468,16 @@ const discoverSessionByReferenceEmbeddableSchema = schema.allOf([
       })
     ),
     overrides: panelOverridesSchema,
-  }),
-]);
+  })
+);
 
-export const discoverSessionEmbeddableSchema = schema.oneOf([
-  discoverSessionByValueEmbeddableSchema,
-  discoverSessionByReferenceEmbeddableSchema,
-]);
+export const getDiscoverSessionEmbeddableSchema = (
+  getDrilldownsSchema: GetDrilldownsSchemaFnType
+) =>
+  schema.oneOf([
+    getDiscoverSessionByValueEmbeddableSchema(getDrilldownsSchema),
+    getDiscoverSessionByReferenceEmbeddableSchema(getDrilldownsSchema),
+  ]);
 
 export type DiscoverSessionDataViewReference = TypeOf<typeof dataViewReferenceSchema>;
 export type DiscoverSessionDataViewSpec = TypeOf<typeof dataViewSpecSchema>;
@@ -472,10 +488,11 @@ export type DiscoverSessionEsqlTab = TypeOf<typeof esqlTabSchema>;
 export type DiscoverSessionTab = TypeOf<typeof tabSchema>;
 
 export type DiscoverSessionEmbeddableByValueState = TypeOf<
-  typeof discoverSessionByValueEmbeddableSchema
+  ReturnType<typeof getDiscoverSessionByValueEmbeddableSchema>
 >;
 export type DiscoverSessionEmbeddableByReferenceState = TypeOf<
-  typeof discoverSessionByReferenceEmbeddableSchema
+  ReturnType<typeof getDiscoverSessionByReferenceEmbeddableSchema>
 >;
-export type DiscoverSessionEmbeddableState = SerializedDrilldowns &
-  TypeOf<typeof discoverSessionEmbeddableSchema>;
+export type DiscoverSessionEmbeddableState = TypeOf<
+  ReturnType<typeof getDiscoverSessionEmbeddableSchema>
+>;

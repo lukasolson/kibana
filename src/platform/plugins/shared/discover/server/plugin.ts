@@ -15,7 +15,7 @@ import { setStateToKbnUrl } from '@kbn/kibana-utils-plugin/common';
 import type { SharePluginSetup } from '@kbn/share-plugin/server';
 import type { PluginInitializerContext } from '@kbn/core/server';
 import { SEARCH_EMBEDDABLE_TYPE } from '@kbn/discover-utils';
-import { discoverSessionEmbeddableSchema } from './embeddable/schema';
+import { getDiscoverSessionEmbeddableSchema } from './embeddable/schema';
 import type { DiscoverServerPluginStart, DiscoverServerPluginStartDeps } from '.';
 import { DISCOVER_APP_LOCATOR } from '../common';
 import { capabilitiesProvider } from './capabilities_provider';
@@ -85,7 +85,7 @@ export class DiscoverServerPlugin
     plugins.embeddable.registerTransforms(SEARCH_EMBEDDABLE_TYPE, {
       getTransforms: (drilldownTransforms) =>
         getSearchEmbeddableTransforms(drilldownTransforms, () => embeddableTransformsEnabled),
-      getSchema: () => discoverSessionEmbeddableSchema,
+      getSchema: (getDrilldownsSchema) => getDiscoverSessionEmbeddableSchema(getDrilldownsSchema),
     });
 
     core.pricing.registerProductFeatures([
