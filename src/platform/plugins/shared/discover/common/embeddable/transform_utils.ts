@@ -213,7 +213,7 @@ export function toStoredTab(apiTab: DiscoverSessionTab): {
   state: DiscoverSessionTabAttributes;
   references: SavedObjectReference[];
 } {
-  const { sort, columns } = apiTab;
+  const { sort, column_order: columnOrder, column_settings: columnSettings } = apiTab;
   const searchSourceValues: SerializedSearchSourceFields = {
     query: apiTab.query,
     ...('filters' in apiTab && { filter: toStoredFilters(apiTab.filters) }),
@@ -223,8 +223,8 @@ export function toStoredTab(apiTab: DiscoverSessionTab): {
   const state: DiscoverSessionTabAttributes = {
     ...toStoredSearchEmbeddableState(apiTab),
     sort: toStoredSort(sort),
-    columns: toStoredColumns(columns),
-    grid: toStoredGrid(columns),
+    columns: columnOrder ?? [],
+    grid: toStoredGrid(columnSettings),
     hideChart: false,
     isTextBasedQuery: !('dataset' in apiTab),
     kibanaSavedObjectMeta: { searchSourceJSON: JSON.stringify(searchSourceFields) },
@@ -240,7 +240,9 @@ export function fromStoredSearchEmbeddableState(
     storedState;
   return {
     ...(sort && { sort: fromStoredSort(sort) }),
-    ...(columns && { columns: fromStoredColumns(columns, grid) }),
+    ...(columns && { column_order: columns }),
+    ...(grid &&
+      Object.keys(grid?.columns ?? {}).length && { column_settings: fromStoredGrid(grid) }),
     ...(rowHeight && { row_height: fromStoredHeight(rowHeight) }),
     ...(sampleSize && { sample_size: sampleSize }),
     ...(rowsPerPage && {
@@ -256,49 +258,36 @@ export function toStoredSearchEmbeddableState(
 ): StoredSearchEmbeddableState {
   const {
     sort,
-    columns,
+    column_order: columnOrder,
+    column_settings: columnSettings,
     row_height: rowHeight,
     sample_size: sampleSize,
     rows_per_page: rowsPerPage,
     header_row_height: headerRowHeight,
     density,
   } = apiState;
-  const grid = toStoredGrid(columns);
   return {
     ...(sort && { sort: toStoredSort(sort) }),
-    ...(columns && { columns: toStoredColumns(columns) }),
+    ...(columnOrder && { columns: columnOrder }),
     ...(rowHeight && { rowHeight: toStoredHeight(rowHeight) }),
     ...(sampleSize && { sampleSize }),
     ...(rowsPerPage && { rowsPerPage }),
     ...(headerRowHeight && { headerRowHeight: toStoredHeight(headerRowHeight) }),
     ...(density && { density }),
-    ...(grid && { grid }),
+    ...(Object.keys(columnSettings ?? {}).length && { grid: toStoredGrid(columnSettings) }),
   };
 }
 
-export function fromStoredColumns(
-  columns: DiscoverSessionTabAttributes['columns'],
-  grid?: DiscoverSessionTabAttributes['grid']
-): DiscoverSessionTab['columns'] {
-  return columns.map((name) => ({
-    name,
-    ...(grid?.columns?.[name] && { width: grid.columns[name]?.width }),
-  }));
-}
-
-export function toStoredColumns(
-  columns: DiscoverSessionTab['columns'] = []
-): DiscoverSessionTabAttributes['columns'] {
-  return columns.map((c) => c.name);
+export function fromStoredGrid(
+  grid: DiscoverSessionTabAttributes['grid']
+): DiscoverSessionTab['column_settings'] {
+  return grid.columns ?? {};
 }
 
 export function toStoredGrid(
-  columns: DiscoverSessionTab['columns'] = []
+  columnSettings: DiscoverSessionTab['column_settings'] = {}
 ): DiscoverSessionTabAttributes['grid'] {
-  const entries = columns
-    ?.filter((c) => c.width != null) // Only persist columns with a width defined
-    .map(({ name, width }) => [name, { width }]);
-  return entries.length ? { columns: Object.fromEntries(entries) } : {};
+  return Object.keys(columnSettings ?? {}).length > 0 ? { columns: columnSettings } : {};
 }
 
 export function fromStoredSort(

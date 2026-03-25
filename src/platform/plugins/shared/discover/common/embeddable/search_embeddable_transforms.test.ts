@@ -121,10 +121,10 @@ describe('searchEmbeddableTransforms', () => {
       expect(result.title).toBe('Panel Title');
       expect(result.description).toBe('Panel description');
       expect(result.tabs).toHaveLength(1);
-      expect(result.tabs[0].columns).toEqual([
-        { name: 'message' },
-        { name: '@timestamp', width: 200 },
-      ]);
+      expect(result.tabs[0].column_order).toEqual(['message', '@timestamp']);
+      expect(result.tabs[0].column_settings).toEqual({
+        '@timestamp': { width: 200 },
+      });
       const {
         sort,
         view_mode: viewMode,
@@ -182,7 +182,6 @@ describe('searchEmbeddableTransforms', () => {
           title: 'Test Search',
           description: 'Test Description',
           time_range: { from: 'now-15m', to: 'now' },
-          grid: {},
         });
         expect(result.references).toEqual([
           {
@@ -211,7 +210,6 @@ describe('searchEmbeddableTransforms', () => {
           title: 'My Search',
           description: 'My description',
           time_range: { from: 'now-1h', to: 'now' },
-          grid: {},
           selectedTabId: 'tab-1',
         });
         expect(result.references).toEqual([
@@ -231,7 +229,8 @@ describe('searchEmbeddableTransforms', () => {
           description: 'Panel description',
           tabs: [
             {
-              columns: [{ name: 'message' }, { name: '@timestamp', width: 200 }],
+              column_order: ['message', '@timestamp'],
+              column_settings: { '@timestamp': { width: 200 } },
               sort: [{ name: '@timestamp', direction: 'desc' }],
               view_mode: VIEW_MODE.DOCUMENT_LEVEL,
               density: DataGridDensity.COMPACT,
@@ -271,7 +270,7 @@ describe('searchEmbeddableTransforms', () => {
           title: 'Panel Title',
           tabs: [
             {
-              columns: [{ name: '_source' }],
+              column_order: ['_source'],
               sort: [],
               view_mode: VIEW_MODE.DOCUMENT_LEVEL,
               density: DataGridDensity.COMPACT,

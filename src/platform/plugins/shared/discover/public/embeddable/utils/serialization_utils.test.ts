@@ -79,7 +79,7 @@ describe('Serialization utils', () => {
     description: 'description',
     tabs: [
       {
-        columns: [{ name: '_source' }],
+        column_order: ['_source'],
         sort: [{ name: 'order_date', direction: 'desc' }],
         view_mode: VIEW_MODE.DOCUMENT_LEVEL,
         density: DataGridDensity.COMPACT,
@@ -257,7 +257,7 @@ describe('Serialization utils', () => {
         discover_session_id: 'savedSearch',
         selected_tab_id: 'deleted-tab-id',
         overrides: {
-          columns: [{ name: 'stale-col-a' }],
+          column_order: ['stale-col-a'],
           sort: [{ name: 'stale_field', direction: 'asc' }],
         },
       };
@@ -288,7 +288,7 @@ describe('Serialization utils', () => {
         title: 'test panel title',
         discover_session_id: 'savedSearch',
         selected_tab_id: 'tab-2',
-        overrides: { columns: [{ name: 'custom-col' }] },
+        overrides: { column_order: ['custom-col'] },
       };
 
       const deserializedState = await deserializeState({
@@ -339,7 +339,7 @@ describe('Serialization utils', () => {
         description: 'description',
         tabs: [
           expect.objectContaining({
-            columns: [{ name: '_source' }],
+            column_order: ['_source'],
             sort: [{ name: 'order_date', direction: 'desc' }],
             view_mode: VIEW_MODE.DOCUMENT_LEVEL,
             density: DataGridDensity.COMPACT,

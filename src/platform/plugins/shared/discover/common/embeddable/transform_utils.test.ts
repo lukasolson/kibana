@@ -14,15 +14,14 @@ import {
   byValueDiscoverSessionToSavedSearchEmbeddableState,
   byValueSavedSearchToDiscoverSessionEmbeddableState,
   discoverSessionToSavedSearchEmbeddableState,
-  fromStoredColumns,
   fromStoredDataset,
+  fromStoredGrid,
   fromStoredHeight,
   fromStoredRuntimeFields,
   fromStoredSearchEmbeddableState,
   fromStoredSort,
   fromStoredTab,
   savedSearchToDiscoverSessionEmbeddableState,
-  toStoredColumns,
   toStoredDataset,
   toStoredFieldFormats,
   toStoredGrid,
@@ -208,7 +207,7 @@ describe('search embeddable transform utils', () => {
         description: 'Panel description',
         tabs: [
           {
-            columns: [{ name: 'message' }],
+            column_order: ['message'],
             sort: [],
             view_mode: VIEW_MODE.DOCUMENT_LEVEL,
             density: DataGridDensity.COMPACT,
@@ -293,7 +292,7 @@ describe('search embeddable transform utils', () => {
               },
             ],
             sort: [{ name: '@timestamp', direction: 'desc' }],
-            columns: [{ name: 'message' }],
+            column_order: ['message'],
             view_mode: VIEW_MODE.DOCUMENT_LEVEL,
             density: DataGridDensity.COMPACT,
             header_row_height: 3,
@@ -369,7 +368,8 @@ describe('search embeddable transform utils', () => {
         selected_tab_id: 'tab-active',
         overrides: {
           sort: [{ name: '@timestamp', direction: 'desc' }],
-          columns: [{ name: 'message', width: 100 }],
+          column_order: ['message'],
+          column_settings: { message: { width: 100 } },
           row_height: 'auto',
           sample_size: 500,
           rows_per_page: 100,
@@ -462,7 +462,6 @@ describe('search embeddable transform utils', () => {
         title: 'My Search',
         description: 'My description',
         time_range: { from: 'now-15m', to: 'now' },
-        grid: {},
         selectedTabId: 'tab-1',
       });
     });
@@ -476,7 +475,8 @@ describe('search embeddable transform utils', () => {
         time_range: { from: 'now-1h', to: 'now' },
         tabs: [
           {
-            columns: [{ name: 'message' }, { name: '@timestamp', width: 200 }],
+            column_order: ['message', '@timestamp'],
+            column_settings: { '@timestamp': { width: 200 } },
             sort: [{ name: '@timestamp', direction: 'desc' }],
             view_mode: VIEW_MODE.DOCUMENT_LEVEL,
             density: DataGridDensity.COMPACT,
@@ -503,6 +503,9 @@ describe('search embeddable transform utils', () => {
       expect(result.state.attributes.tabs).toHaveLength(1);
       expect(result.state.attributes.tabs[0].attributes.columns).toEqual(['message', '@timestamp']);
       expect(result.state.attributes.tabs[0].attributes.sort).toEqual([['@timestamp', 'desc']]);
+      expect(result.state.attributes.tabs[0].attributes.grid).toEqual({
+        columns: { '@timestamp': { width: 200 } },
+      });
       expect(result.state.attributes.tabs[0].attributes.rowHeight).toBe(-1);
       expect(result.state.attributes.tabs[0].attributes.headerRowHeight).toBe(-1);
       const searchSource = JSON.parse(
@@ -520,7 +523,7 @@ describe('search embeddable transform utils', () => {
         time_range: { from: 'now-1h', to: 'now' },
         tabs: [
           {
-            columns: [{ name: 'foo' }],
+            column_order: ['foo'],
             sort: [],
             view_mode: VIEW_MODE.DOCUMENT_LEVEL,
             density: DataGridDensity.COMPACT,
@@ -672,83 +675,48 @@ describe('search embeddable transform utils', () => {
     });
   });
 
-  describe('fromStoredColumns', () => {
-    it('maps column names to column objects without width when grid has no column widths', () => {
-      const columns = ['message', '@timestamp'];
-      const grid = { columns: {} };
-      const result = fromStoredColumns(columns, grid);
-      expect(result).toEqual([{ name: 'message' }, { name: '@timestamp' }]);
+  describe('fromStoredGrid', () => {
+    it('maps saved grid.columns to column_settings', () => {
+      expect(
+        fromStoredGrid({
+          columns: {
+            message: { width: 100 },
+            '@timestamp': { width: 200 },
+          },
+        })
+      ).toEqual({
+        message: { width: 100 },
+        '@timestamp': { width: 200 },
+      });
     });
 
-    it('includes width from grid when present', () => {
-      const columns = ['message', '@timestamp'];
-      const grid = {
-        columns: {
-          message: { width: 100 },
-          '@timestamp': { width: 200 },
-        },
-      };
-      const result = fromStoredColumns(columns, grid);
-      expect(result).toEqual([
-        { name: 'message', width: 100 },
-        { name: '@timestamp', width: 200 },
-      ]);
-    });
-
-    it('includes width only for columns that have it in grid', () => {
-      const columns = ['message', '@timestamp', 'source'];
-      const grid = {
-        columns: {
-          '@timestamp': { width: 150 },
-        },
-      };
-      const result = fromStoredColumns(columns, grid);
-      expect(result).toEqual([
-        { name: 'message' },
-        { name: '@timestamp', width: 150 },
-        { name: 'source' },
-      ]);
-    });
-  });
-
-  describe('toStoredColumns', () => {
-    it('maps column objects to column names', () => {
-      const columns = [{ name: 'message' }, { name: '@timestamp', width: 200 }];
-      const result = toStoredColumns(columns);
-      expect(result).toEqual(['message', '@timestamp']);
-    });
-
-    it('returns empty array when columns is empty', () => {
-      expect(toStoredColumns([])).toEqual([]);
-    });
-
-    it('returns empty array when columns is undefined (default)', () => {
-      expect(toStoredColumns()).toEqual([]);
+    it('returns empty object when grid has no column entries', () => {
+      expect(fromStoredGrid({ columns: {} })).toEqual({});
+      expect(fromStoredGrid({})).toEqual({});
     });
   });
 
   describe('toStoredGrid', () => {
-    it('builds grid from columns (only columns with width are included)', () => {
-      const columns = [{ name: 'message' }, { name: '@timestamp', width: 200 }];
-      const result = toStoredGrid(columns);
-      expect(result).toEqual({
+    it('builds saved grid from non-empty column_settings', () => {
+      expect(
+        toStoredGrid({
+          message: { width: 100 },
+          '@timestamp': { width: 200 },
+        })
+      ).toEqual({
         columns: {
+          message: { width: 100 },
           '@timestamp': { width: 200 },
         },
       });
     });
 
-    it('returns empty object when columns is empty (no columns with width)', () => {
-      expect(toStoredGrid([])).toEqual({});
+    it('returns empty object when column_settings is empty', () => {
+      expect(toStoredGrid({})).toEqual({});
     });
 
-    it('returns empty object when columns is undefined (default)', () => {
+    it('returns empty object when column_settings is undefined (default)', () => {
       expect(toStoredGrid()).toEqual({});
-    });
-
-    it('returns empty object when no column has width', () => {
-      const columns = [{ name: 'message' }, { name: '@timestamp' }];
-      expect(toStoredGrid(columns)).toEqual({});
     });
   });
 
@@ -772,10 +740,11 @@ describe('search embeddable transform utils', () => {
       const result = fromStoredSearchEmbeddableState(storedState);
       expect(result).toEqual({
         sort: [{ name: '@timestamp', direction: 'desc' }],
-        columns: [
-          { name: 'message', width: 100 },
-          { name: '@timestamp', width: 200 },
-        ],
+        column_order: ['message', '@timestamp'],
+        column_settings: {
+          message: { width: 100 },
+          '@timestamp': { width: 200 },
+        },
         row_height: 'auto',
         sample_size: 500,
         rows_per_page: 100,
@@ -793,7 +762,7 @@ describe('search embeddable transform utils', () => {
       const result = fromStoredSearchEmbeddableState(storedState);
       expect(result).toEqual({
         sort: [{ name: '@timestamp', direction: 'desc' }],
-        columns: [{ name: 'message' }],
+        column_order: ['message'],
       });
       expect(result.row_height).toBeUndefined();
       expect(result.sample_size).toBeUndefined();
@@ -827,7 +796,8 @@ describe('search embeddable transform utils', () => {
     it('converts panel overrides with all fields to stored state', () => {
       const apiState = {
         sort: [{ name: '@timestamp', direction: 'desc' as const }],
-        columns: [{ name: 'message' }, { name: '@timestamp', width: 200 }],
+        column_order: ['message', '@timestamp'],
+        column_settings: { '@timestamp': { width: 200 } },
         row_height: 'auto' as const,
         sample_size: 500,
         rows_per_page: 100 as const,
@@ -854,13 +824,12 @@ describe('search embeddable transform utils', () => {
     it('omits undefined/falsy API fields from result', () => {
       const apiState = {
         sort: [{ name: '@timestamp', direction: 'desc' as const }],
-        columns: [{ name: 'message' }],
+        column_order: ['message'],
       };
       const result = toStoredSearchEmbeddableState(apiState);
       expect(result).toEqual({
         sort: [['@timestamp', 'desc']],
         columns: ['message'],
-        grid: {},
       });
       expect(result.rowHeight).toBeUndefined();
       expect(result.sampleSize).toBeUndefined();
@@ -1316,7 +1285,8 @@ describe('search embeddable transform utils', () => {
         references
       );
       expect(result.sort).toEqual([{ name: '@timestamp', direction: 'desc' }]);
-      expect(result.columns).toEqual([{ name: 'message' }, { name: '@timestamp', width: 200 }]);
+      expect(result.column_order).toEqual(['message', '@timestamp']);
+      expect(result.column_settings).toEqual({ '@timestamp': { width: 200 } });
       expect(result.row_height).toBe('auto');
       expect(result.header_row_height).toBe('auto');
       expect(result.density).toBe(DataGridDensity.COMPACT);
@@ -1331,7 +1301,8 @@ describe('search embeddable transform utils', () => {
   describe('toStoredTab', () => {
     it('converts API classic tab to stored tab with references', () => {
       const apiTab: DiscoverSessionEmbeddableByValueState['tabs'][0] = {
-        columns: [{ name: 'message' }, { name: '@timestamp', width: 200 }],
+        column_order: ['message', '@timestamp'],
+        column_settings: { '@timestamp': { width: 200 } },
         sort: [{ name: '@timestamp', direction: 'desc' }],
         view_mode: VIEW_MODE.DOCUMENT_LEVEL,
         density: DataGridDensity.COMPACT,
@@ -1365,7 +1336,7 @@ describe('search embeddable transform utils', () => {
 
     it('converts API tab with index-pattern dataset (no refs) when inline', () => {
       const apiTab: DiscoverSessionEmbeddableByValueState['tabs'][0] = {
-        columns: [{ name: 'foo' }],
+        column_order: ['foo'],
         sort: [],
         view_mode: VIEW_MODE.DOCUMENT_LEVEL,
         density: DataGridDensity.COMPACT,

@@ -20,12 +20,7 @@ import { asCodeFilterSchema } from '@kbn/as-code-filters-schema';
 import type { GetDrilldownsSchemaFnType } from '@kbn/embeddable-plugin/server';
 import { ON_OPEN_PANEL_MENU } from '@kbn/ui-actions-plugin/common/trigger_ids';
 
-const columnSchema = schema.object({
-  name: schema.string({
-    meta: {
-      description: 'The name of the field to display in the data table.',
-    },
-  }),
+const columnSettingsEntrySchema = schema.object({
   width: schema.maybe(
     schema.number({
       min: 0,
@@ -220,13 +215,28 @@ const dataTableLimitsSchema = schema.object(
 
 const dataTableSchema = schema.object(
   {
-    columns: schema.maybe(
-      schema.arrayOf(columnSchema, {
-        maxSize: 100,
-        defaultValue: [],
+    column_order: schema.maybe(
+      schema.arrayOf(
+        schema.string({
+          meta: {
+            description: 'Field name of a column in display order.',
+          },
+        }),
+        {
+          maxSize: 100,
+          defaultValue: [],
+          meta: {
+            description:
+              'Ordered list of field names to display in the data table. If omitted, defaults to the advanced setting "defaultColumns" or the referenced saved object.',
+          },
+        }
+      )
+    ),
+    column_settings: schema.maybe(
+      schema.recordOf(schema.string(), columnSettingsEntrySchema, {
         meta: {
           description:
-            'List of columns to display in the data table. If omitted, defaults to the advanced setting "defaultColumns".',
+            'Per-column presentation settings keyed by field name (e.g. widths). Keys should correspond to entries in `column_order` when both are set.',
         },
       })
     ),
@@ -290,13 +300,28 @@ const dataTableSchema = schema.object(
 
 const panelOverridesSchema = schema.object(
   {
-    columns: schema.maybe(
-      schema.arrayOf(columnSchema, {
-        maxSize: 100,
-        defaultValue: [],
+    column_order: schema.maybe(
+      schema.arrayOf(
+        schema.string({
+          meta: {
+            description: 'Field name of a column in display order.',
+          },
+        }),
+        {
+          maxSize: 100,
+          defaultValue: [],
+          meta: {
+            description:
+              'When set, overrides column order for the data table relative to the referenced saved object (`discover_session_id`) or the inline tab in `tabs`. If omitted, the source configuration is used.',
+          },
+        }
+      )
+    ),
+    column_settings: schema.maybe(
+      schema.recordOf(schema.string(), columnSettingsEntrySchema, {
         meta: {
           description:
-            'Columns to display in the data table. When set, overrides the referenced saved object (when `discover_session_id` is used) or the inline tab config in `tabs`. If omitted, falls back to the source or to the advanced setting "defaultColumns".',
+            'Per-column presentation overrides (e.g. widths) keyed by field name. When set, merges with the source configuration for the referenced session or inline tab.',
         },
       })
     ),
@@ -450,7 +475,7 @@ const getDiscoverSessionByValueEmbeddableSchema = withPanelSchemas(
       maxSize: 1,
       meta: {
         description:
-          'Inline tab configuration. Used when no `discover_session_id` is set. Panel-level fields (e.g. `columns`, `sort`) override these when provided. Currently supports one tab.',
+          'Inline tab configuration. Used when no `discover_session_id` is set. Panel-level fields (e.g. `column_order`, `sort`) override these when provided. Currently supports one tab.',
       },
     }),
   })
