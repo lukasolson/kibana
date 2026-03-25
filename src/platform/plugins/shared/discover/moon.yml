@@ -137,7 +137,6 @@ dependsOn:
   - '@kbn/cps-utils'
   - '@kbn/core-saved-objects-common'
   - '@kbn/as-code-filters-constants'
-  - '@kbn/as-code-data-views-schema'
 tags:
   - plugin
   - prod
