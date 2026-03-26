@@ -17,6 +17,7 @@ import {
 } from '@kbn/presentation-publishing-schemas';
 import { VIEW_MODE } from '@kbn/saved-search-plugin/common';
 import { asCodeFilterSchema } from '@kbn/as-code-filters-schema';
+import { runtimeFieldSchema } from '@kbn/as-code-data-views-schema';
 import type { GetDrilldownsSchemaFnType } from '@kbn/embeddable-plugin/server';
 import { ON_OPEN_PANEL_MENU } from '@kbn/ui-actions-plugin/common/trigger_ids';
 
@@ -95,67 +96,7 @@ export const dataViewSpecSchema = schema.object(
      * Optional array of runtime fields to define on the index. Each runtime field describes a computed field available at query time.
      * If not provided, no runtime fields are used.
      */
-    runtime_fields: schema.maybe(
-      schema.arrayOf(
-        schema.object({
-          /**
-           * The type of the runtime field (e.g., 'keyword', 'long', 'date').
-           * Example: 'keyword'
-           */
-          type: schema.oneOf(
-            [
-              schema.literal('keyword'),
-              schema.literal('long'),
-              schema.literal('double'),
-              schema.literal('date'),
-              schema.literal('ip'),
-              schema.literal('boolean'),
-              schema.literal('geo_point'),
-              schema.literal('composite'),
-            ],
-            {
-              meta: {
-                description: 'The type of the runtime field (e.g., "keyword", "long", "date").',
-              },
-            }
-          ),
-          /**
-           * The name of the runtime field.
-           * Example: 'my_runtime_field'
-           */
-          name: schema.string({
-            meta: {
-              description: 'The name of the runtime field. Example: "my_runtime_field".',
-            },
-          }),
-          /**
-           * The script that defines the runtime field. This should be a painless script that computes the field value at query time.
-           * Example: 'emit(doc["field_name"].value * 2);'
-           */
-          script: schema.maybe(
-            schema.string({
-              meta: {
-                description:
-                  'The script that defines the runtime field. This should be a painless script that computes the field value at query time.',
-              },
-            })
-          ),
-          /**
-           * Optional format definition for the runtime field. The structure depends on the field type and use case.
-           * If not provided, no format is applied.
-           */
-          format: schema.maybe(
-            schema.any({
-              meta: {
-                description:
-                  'Optional format definition for the runtime field. The structure depends on the field type and use case.',
-              },
-            })
-          ),
-        }),
-        { maxSize: 100 }
-      )
-    ),
+    runtime_fields: schema.maybe(schema.arrayOf(runtimeFieldSchema, { maxSize: 100 })),
   },
   { meta: { id: 'indexDatasetTypeSchema' } }
 );

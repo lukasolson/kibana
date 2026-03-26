@@ -17,16 +17,13 @@ import {
   fromStoredDataset,
   fromStoredGrid,
   fromStoredHeight,
-  fromStoredRuntimeFields,
   fromStoredSearchEmbeddableState,
   fromStoredSort,
   fromStoredTab,
   savedSearchToDiscoverSessionEmbeddableState,
   toStoredDataset,
-  toStoredFieldFormats,
   toStoredGrid,
   toStoredHeight,
-  toStoredRuntimeFields,
   toStoredSearchEmbeddableState,
   toStoredSort,
   toStoredTab,
@@ -542,7 +539,7 @@ describe('search embeddable transform utils', () => {
                   name: 'rt',
                   type: 'keyword',
                   script: 'emit("x")',
-                  format: { id: 'string' },
+                  format: { type: 'string' },
                 },
               ],
             },
@@ -558,6 +555,9 @@ describe('search embeddable transform utils', () => {
         timeFieldName: '@timestamp',
         fieldFormats: {
           rt: { id: 'string' },
+        },
+        fieldAttrs: {
+          rt: {},
         },
         runtimeFieldMap: {
           rt: {
@@ -1027,7 +1027,7 @@ describe('search embeddable transform utils', () => {
             name: 'foobar',
             script: 'emit(UUID.randomUUID().toString())',
             format: {
-              id: 'url',
+              type: 'url',
               params: {
                 parsedUrl: {
                   origin: 'http://localhost:5601',
@@ -1041,64 +1041,12 @@ describe('search embeddable transform utils', () => {
                 height: null,
               },
             },
+            custom_label: 'my custom label',
+            custom_description: 'my custom description',
           },
         ],
       };
       const result = fromStoredDataset(index);
-      expect(result).toEqual(expected);
-    });
-  });
-
-  describe('fromStoredRuntimeFields', () => {
-    it('transforms runtime fields with field formats', () => {
-      const runtimeFieldMap: DataViewSpec['runtimeFieldMap'] = {
-        foobar: {
-          type: 'keyword',
-          script: {
-            source: 'emit(UUID.randomUUID().toString())',
-          },
-        },
-      };
-      const fieldFormats: DataViewSpec['fieldFormats'] = {
-        foobar: {
-          id: 'url',
-          params: {
-            parsedUrl: {
-              origin: 'http://localhost:5601',
-              pathname: '/app/dashboards',
-              basePath: '',
-            },
-            type: 'a',
-            urlTemplate: 'http://google.com?q={{value}}',
-            labelTemplate: 'google search for {{value}}',
-            width: null,
-            height: null,
-          },
-        },
-      };
-      const expected: DiscoverSessionDataViewSpec['runtime_fields'] = [
-        {
-          type: 'keyword',
-          name: 'foobar',
-          script: 'emit(UUID.randomUUID().toString())',
-          format: {
-            id: 'url',
-            params: {
-              parsedUrl: {
-                origin: 'http://localhost:5601',
-                pathname: '/app/dashboards',
-                basePath: '',
-              },
-              type: 'a',
-              urlTemplate: 'http://google.com?q={{value}}',
-              labelTemplate: 'google search for {{value}}',
-              width: null,
-              height: null,
-            },
-          },
-        },
-      ];
-      const result = fromStoredRuntimeFields(runtimeFieldMap, fieldFormats);
       expect(result).toEqual(expected);
     });
   });
@@ -1123,7 +1071,7 @@ describe('search embeddable transform utils', () => {
             name: 'rt',
             type: 'keyword',
             script: 'emit(doc["id"].value)',
-            format: { id: 'string' },
+            format: { type: 'string' },
           },
         ],
       };
@@ -1132,7 +1080,10 @@ describe('search embeddable transform utils', () => {
         title: 'my-index-*',
         timeFieldName: '@timestamp',
         fieldFormats: {
-          rt: { id: 'string' },
+          rt: { id: 'string', params: undefined },
+        },
+        fieldAttrs: {
+          rt: {},
         },
         runtimeFieldMap: {
           rt: {
@@ -1153,100 +1104,6 @@ describe('search embeddable transform utils', () => {
       expect(result).toEqual({
         title: 'logs-*',
         timeFieldName: '@timestamp',
-      });
-    });
-  });
-
-  describe('toStoredRuntimeFields', () => {
-    it('converts runtime fields to DataViewSpec runtimeFieldMap', () => {
-      const runtimeFields: DiscoverSessionDataViewSpec['runtime_fields'] = [
-        {
-          name: 'myField',
-          type: 'keyword',
-          script: 'emit("hello")',
-          format: { id: 'url', params: {} },
-        },
-      ];
-      const result = toStoredRuntimeFields(runtimeFields);
-      expect(result).toEqual({
-        myField: {
-          type: 'keyword',
-          script: { source: 'emit("hello")' },
-        },
-      });
-    });
-
-    it('omits script when not present', () => {
-      const runtimeFields: DiscoverSessionDataViewSpec['runtime_fields'] = [
-        { name: 'f', type: 'long' },
-      ];
-      const result = toStoredRuntimeFields(runtimeFields);
-      expect(result).toEqual({
-        f: { type: 'long' },
-      });
-    });
-
-    it('omits fieldFormat when not present', () => {
-      const runtimeFields: DiscoverSessionDataViewSpec['runtime_fields'] = [
-        { name: 'f', type: 'keyword', script: 'emit("x")' },
-      ];
-      const result = toStoredRuntimeFields(runtimeFields);
-      expect(result).toEqual({
-        f: { type: 'keyword', script: { source: 'emit("x")' } },
-      });
-    });
-
-    it('returns empty object when runtimeFields is undefined (default)', () => {
-      expect(toStoredRuntimeFields()).toEqual({});
-    });
-
-    it('returns empty object when runtimeFields is empty array', () => {
-      expect(toStoredRuntimeFields([])).toEqual({});
-    });
-  });
-
-  describe('toStoredFieldFormats', () => {
-    it('converts runtime fields with format to fieldFormats object', () => {
-      const runtimeFields: DiscoverSessionDataViewSpec['runtime_fields'] = [
-        {
-          name: 'rt',
-          type: 'keyword',
-          script: 'emit("x")',
-          format: { id: 'string' },
-        },
-      ];
-      const result = toStoredFieldFormats(runtimeFields);
-      expect(result).toEqual({
-        rt: { id: 'string' },
-      });
-    });
-
-    it('omits entries when format is missing', () => {
-      const runtimeFields: DiscoverSessionDataViewSpec['runtime_fields'] = [
-        { name: 'rt', type: 'keyword', script: 'emit("x")' },
-      ];
-      const result = toStoredFieldFormats(runtimeFields);
-      expect(result).toEqual({});
-    });
-
-    it('returns undefined when runtimeFields is undefined (default)', () => {
-      expect(toStoredFieldFormats()).toBeUndefined();
-    });
-
-    it('returns undefined when runtimeFields is empty array', () => {
-      expect(toStoredFieldFormats([])).toBeUndefined();
-    });
-
-    it('includes only runtime fields that have format', () => {
-      const runtimeFields: DiscoverSessionDataViewSpec['runtime_fields'] = [
-        { name: 'a', type: 'keyword', format: { id: 'url' } },
-        { name: 'b', type: 'long' },
-        { name: 'c', type: 'date', format: { id: 'date' } },
-      ];
-      const result = toStoredFieldFormats(runtimeFields);
-      expect(result).toEqual({
-        a: { id: 'url' },
-        c: { id: 'date' },
       });
     });
   });

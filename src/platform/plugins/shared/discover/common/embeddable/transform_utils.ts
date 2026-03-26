@@ -10,13 +10,19 @@
 import type { DiscoverSessionTabAttributes } from '@kbn/saved-search-plugin/server';
 import type { SavedSearchAttributes } from '@kbn/saved-search-plugin/common';
 import { extractTabs, SavedSearchType, VIEW_MODE } from '@kbn/saved-search-plugin/common';
-import type { DataViewSpec, SerializedSearchSourceFields } from '@kbn/data-plugin/common';
+import type { SerializedSearchSourceFields } from '@kbn/data-plugin/common';
 import {
   extractReferences,
   injectReferences,
   parseSearchSourceJSON,
 } from '@kbn/data-plugin/common';
 import { fromStoredFilters, toStoredFilters } from '@kbn/as-code-filters-transforms';
+import {
+  fromStoredRuntimeFields,
+  toStoredFieldAttributes,
+  toStoredFieldFormats,
+  toStoredRuntimeFields,
+} from '@kbn/as-code-data-views-transforms';
 import type { SavedObjectReference } from '@kbn/core/server';
 import { DataGridDensity } from '@kbn/discover-utils';
 import { isOfAggregateQueryType } from '@kbn/es-query';
@@ -27,7 +33,6 @@ import {
 import type {
   DiscoverSessionClassicTab,
   DiscoverSessionDataset,
-  DiscoverSessionDataViewSpec,
   DiscoverSessionEmbeddableByReferenceState,
   DiscoverSessionEmbeddableByValueState,
   DiscoverSessionEmbeddableState,
@@ -331,7 +336,11 @@ export function fromStoredDataset(
     type: 'index',
     index: title,
     time_field: index.timeFieldName,
-    runtime_fields: fromStoredRuntimeFields(index.runtimeFieldMap, index.fieldFormats),
+    runtime_fields: fromStoredRuntimeFields(
+      index.runtimeFieldMap,
+      index.fieldFormats,
+      index.fieldAttrs
+    ),
   };
 }
 
@@ -341,49 +350,12 @@ export function toStoredDataset(
   if (dataset.type === 'dataView') return dataset.id;
   const runtimeFieldMap = toStoredRuntimeFields(dataset.runtime_fields);
   const fieldFormats = toStoredFieldFormats(dataset.runtime_fields);
+  const fieldAttrs = toStoredFieldAttributes(dataset.runtime_fields);
   return {
     title: dataset.index,
     timeFieldName: dataset.time_field,
     ...(runtimeFieldMap && Object.keys(runtimeFieldMap).length > 0 && { runtimeFieldMap }),
     ...(fieldFormats && Object.keys(fieldFormats).length > 0 && { fieldFormats }),
+    ...(fieldAttrs && Object.keys(fieldAttrs).length > 0 && { fieldAttrs }),
   };
-}
-
-export function fromStoredRuntimeFields(
-  runtimeFields: DataViewSpec['runtimeFieldMap'] = {},
-  fieldFormats: DataViewSpec['fieldFormats'] = {}
-): DiscoverSessionDataViewSpec['runtime_fields'] {
-  return Object.keys(runtimeFields).map((name) => ({
-    type: runtimeFields?.[name].type,
-    name,
-    script: runtimeFields?.[name].script?.source,
-    format: fieldFormats?.[name],
-  }));
-}
-
-export function toStoredRuntimeFields(
-  runtimeFields: DiscoverSessionDataViewSpec['runtime_fields'] = []
-): DataViewSpec['runtimeFieldMap'] {
-  if (!runtimeFields || runtimeFields.length === 0) return {};
-  return runtimeFields.reduce<DataViewSpec['runtimeFieldMap']>((acc, { name, type, script }) => {
-    return {
-      ...acc,
-      [name]: {
-        type,
-        ...(script && { script: { source: script } }),
-      },
-    };
-  }, {});
-}
-
-export function toStoredFieldFormats(
-  runtimeFields: DiscoverSessionDataViewSpec['runtime_fields'] = []
-): DataViewSpec['fieldFormats'] {
-  if (!runtimeFields || runtimeFields.length === 0) return undefined;
-  return runtimeFields.reduce<DataViewSpec['fieldFormats']>((acc, { name, format }) => {
-    return {
-      ...acc,
-      ...(format ? { [name]: format } : {}),
-    };
-  }, {});
 }
