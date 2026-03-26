@@ -17,12 +17,7 @@ import {
   parseSearchSourceJSON,
 } from '@kbn/data-plugin/common';
 import { fromStoredFilters, toStoredFilters } from '@kbn/as-code-filters-transforms';
-import {
-  fromStoredRuntimeFields,
-  toStoredFieldAttributes,
-  toStoredFieldFormats,
-  toStoredRuntimeFields,
-} from '@kbn/as-code-data-views-transforms';
+import { fromStoredDataView, toStoredDataView } from '@kbn/as-code-data-views-transforms';
 import type { SavedObjectReference } from '@kbn/core/server';
 import { DataGridDensity } from '@kbn/discover-utils';
 import { isOfAggregateQueryType } from '@kbn/es-query';
@@ -32,7 +27,6 @@ import {
 } from './type_guards';
 import type {
   DiscoverSessionClassicTab,
-  DiscoverSessionDataset,
   DiscoverSessionEmbeddableByReferenceState,
   DiscoverSessionEmbeddableByValueState,
   DiscoverSessionEmbeddableState,
@@ -209,7 +203,7 @@ export function fromStoredTab(
         }),
         query,
         filters: fromStoredFilters(filter) ?? [],
-        dataset: fromStoredDataset(index),
+        data_source: fromStoredDataView(index),
         view_mode: viewMode ?? VIEW_MODE.DOCUMENT_LEVEL,
       };
 }
@@ -222,7 +216,7 @@ export function toStoredTab(apiTab: DiscoverSessionTab): {
   const searchSourceValues: SerializedSearchSourceFields = {
     query: apiTab.query,
     ...('filters' in apiTab && { filter: toStoredFilters(apiTab.filters) }),
-    ...('dataset' in apiTab && { index: toStoredDataset(apiTab.dataset) }),
+    ...('data_source' in apiTab && { index: toStoredDataView(apiTab.data_source) }),
   };
   const [searchSourceFields, references] = extractReferences(searchSourceValues);
   const state: DiscoverSessionTabAttributes = {
@@ -231,7 +225,7 @@ export function toStoredTab(apiTab: DiscoverSessionTab): {
     columns: columnOrder ?? [],
     grid: toStoredGrid(columnSettings),
     hideChart: false,
-    isTextBasedQuery: !('dataset' in apiTab),
+    isTextBasedQuery: !('data_source' in apiTab),
     kibanaSavedObjectMeta: { searchSourceJSON: JSON.stringify(searchSourceFields) },
     ...('view_mode' in apiTab && { viewMode: apiTab.view_mode }),
   };
@@ -321,41 +315,4 @@ export function toStoredHeight(
   height: DiscoverSessionTab['row_height'] | DiscoverSessionTab['header_row_height']
 ): number {
   return typeof height === 'number' ? height : -1; // -1 === 'auto'
-}
-
-export function fromStoredDataset(
-  index: SerializedSearchSourceFields['index']
-): DiscoverSessionDataset {
-  if (index == null) throw new Error('Data view is required to convert from stored dataset');
-  if (typeof index === 'string') return { type: 'dataView', id: index };
-  const title = index.title ?? index.id;
-  if (title == null || title === '') {
-    throw new Error('Stored index object must have a title or id to convert to dataset');
-  }
-  return {
-    type: 'index',
-    index: title,
-    time_field: index.timeFieldName,
-    runtime_fields: fromStoredRuntimeFields(
-      index.runtimeFieldMap,
-      index.fieldFormats,
-      index.fieldAttrs
-    ),
-  };
-}
-
-export function toStoredDataset(
-  dataset: DiscoverSessionDataset
-): SerializedSearchSourceFields['index'] {
-  if (dataset.type === 'dataView') return dataset.id;
-  const runtimeFieldMap = toStoredRuntimeFields(dataset.runtime_fields);
-  const fieldFormats = toStoredFieldFormats(dataset.runtime_fields);
-  const fieldAttrs = toStoredFieldAttributes(dataset.runtime_fields);
-  return {
-    title: dataset.index,
-    timeFieldName: dataset.time_field,
-    ...(runtimeFieldMap && Object.keys(runtimeFieldMap).length > 0 && { runtimeFieldMap }),
-    ...(fieldFormats && Object.keys(fieldFormats).length > 0 && { fieldFormats }),
-    ...(fieldAttrs && Object.keys(fieldAttrs).length > 0 && { fieldAttrs }),
-  };
 }

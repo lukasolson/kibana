@@ -7,6 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
+import { AS_CODE_DATA_VIEW_REFERENCE_TYPE } from '@kbn/as-code-data-views-schema';
 import type { SerializedSearchSourceFields } from '@kbn/data-plugin/common';
 import { createSearchSourceMock } from '@kbn/data-plugin/public/mocks';
 import { dataViewMock } from '@kbn/discover-utils/src/__mocks__';
@@ -89,7 +90,7 @@ describe('Serialization utils', () => {
         filters: [],
         rows_per_page: 100,
         sample_size: 100,
-        dataset: { type: 'dataView', id: dataViewId },
+        data_source: { type: AS_CODE_DATA_VIEW_REFERENCE_TYPE, id: dataViewId },
       },
     ],
   };
@@ -343,7 +344,7 @@ describe('Serialization utils', () => {
             sort: [{ name: 'order_date', direction: 'desc' }],
             view_mode: VIEW_MODE.DOCUMENT_LEVEL,
             density: DataGridDensity.COMPACT,
-            dataset: { type: 'dataView', id: dataViewId },
+            data_source: { type: AS_CODE_DATA_VIEW_REFERENCE_TYPE, id: dataViewId },
           }),
         ],
       });

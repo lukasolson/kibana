@@ -7,6 +7,10 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
+import {
+  AS_CODE_DATA_VIEW_REFERENCE_TYPE,
+  AS_CODE_DATA_VIEW_SPEC_TYPE,
+} from '@kbn/as-code-data-views-schema';
 import type { SavedObjectReference } from '@kbn/core-saved-objects-common/src/server_types';
 import {
   byReferenceDiscoverSessionToSavedSearchEmbeddableState,
@@ -14,14 +18,12 @@ import {
   byValueDiscoverSessionToSavedSearchEmbeddableState,
   byValueSavedSearchToDiscoverSessionEmbeddableState,
   discoverSessionToSavedSearchEmbeddableState,
-  fromStoredDataset,
   fromStoredGrid,
   fromStoredHeight,
   fromStoredSearchEmbeddableState,
   fromStoredSort,
   fromStoredTab,
   savedSearchToDiscoverSessionEmbeddableState,
-  toStoredDataset,
   toStoredGrid,
   toStoredHeight,
   toStoredSearchEmbeddableState,
@@ -41,11 +43,6 @@ import type {
   DiscoverSessionEmbeddableByValueState,
 } from '../../server';
 import { DataGridDensity } from '@kbn/discover-utils';
-import type {
-  DiscoverSessionDataViewReference,
-  DiscoverSessionDataViewSpec,
-} from '../../server/embeddable';
-import type { DataViewSpec } from '@kbn/data-views-plugin/common';
 import { ASCODE_FILTER_OPERATOR, ASCODE_FILTER_TYPE } from '@kbn/as-code-filters-constants';
 
 describe('search embeddable transform utils', () => {
@@ -170,7 +167,7 @@ describe('search embeddable transform utils', () => {
 
       expect('tabs' in result && result.tabs).toBeDefined();
       expect('tabs' in result && result.tabs?.[0]).toMatchObject({
-        dataset: { type: 'dataView', id: dataViewId },
+        data_source: { type: AS_CODE_DATA_VIEW_REFERENCE_TYPE, id: dataViewId },
       });
     });
   });
@@ -212,7 +209,7 @@ describe('search embeddable transform utils', () => {
             row_height: 'auto',
             query: { language: 'kuery', query: '' },
             filters: [],
-            dataset: { type: 'dataView', id: 'data-view-1' },
+            data_source: { type: AS_CODE_DATA_VIEW_REFERENCE_TYPE, id: 'data-view-1' },
           },
         ],
       };
@@ -293,8 +290,8 @@ describe('search embeddable transform utils', () => {
             view_mode: VIEW_MODE.DOCUMENT_LEVEL,
             density: DataGridDensity.COMPACT,
             header_row_height: 3,
-            dataset: {
-              type: 'dataView',
+            data_source: {
+              type: AS_CODE_DATA_VIEW_REFERENCE_TYPE,
               id: 'c7d7a1f5-19da-4ba9-af15-5919e8cd2528',
             },
           },
@@ -483,7 +480,7 @@ describe('search embeddable transform utils', () => {
             filters: [],
             rows_per_page: 100,
             sample_size: 1000,
-            dataset: { type: 'dataView', id: 'data-view-1' },
+            data_source: { type: AS_CODE_DATA_VIEW_REFERENCE_TYPE, id: 'data-view-1' },
           },
         ],
       };
@@ -530,9 +527,9 @@ describe('search embeddable transform utils', () => {
             filters: [],
             rows_per_page: 25,
             sample_size: 500,
-            dataset: {
-              type: 'index',
-              index: 'my-*',
+            data_source: {
+              type: AS_CODE_DATA_VIEW_SPEC_TYPE,
+              index_pattern: 'my-*',
               time_field: '@timestamp',
               runtime_fields: [
                 {
@@ -957,157 +954,6 @@ describe('search embeddable transform utils', () => {
     });
   });
 
-  describe('fromStoredDataset', () => {
-    it('throws when index is null', () => {
-      expect(() => fromStoredDataset(null as unknown as string)).toThrow(
-        'Data view is required to convert from stored dataset'
-      );
-    });
-
-    it('returns dataView reference when index is a string id', () => {
-      const result = fromStoredDataset('my-data-view-id');
-      expect(result).toEqual({ type: 'dataView', id: 'my-data-view-id' });
-    });
-
-    it('throws when index object has no title or id', () => {
-      expect(() => fromStoredDataset({ timeFieldName: '@timestamp' } as unknown as string)).toThrow(
-        'Stored index object must have a title or id to convert to dataset'
-      );
-    });
-
-    it('transforms index-pattern object to DiscoverSessionDataViewSpec', () => {
-      const index: DataViewSpec = {
-        id: 'eaa3802b-a071-49c0-8442-1fcd2cdcc9fa',
-        title: 'f*',
-        timeFieldName: '@timestamp',
-        sourceFilters: [],
-        fieldFormats: {
-          foobar: {
-            id: 'url',
-            params: {
-              parsedUrl: {
-                origin: 'http://localhost:5601',
-                pathname: '/app/dashboards',
-                basePath: '',
-              },
-              type: 'a',
-              urlTemplate: 'http://google.com?q={{value}}',
-              labelTemplate: 'google search for {{value}}',
-              width: null,
-              height: null,
-            },
-          },
-        },
-        runtimeFieldMap: {
-          foobar: {
-            type: 'keyword',
-            script: {
-              source: 'emit(UUID.randomUUID().toString())',
-            },
-          },
-        },
-        fieldAttrs: {
-          foobar: {
-            customLabel: 'my custom label',
-            customDescription: 'my custom description',
-          },
-        },
-        allowNoIndex: false,
-        name: 'f*',
-        allowHidden: false,
-        managed: false,
-      };
-      const expected: DiscoverSessionDataViewSpec = {
-        type: 'index',
-        index: 'f*',
-        time_field: '@timestamp',
-        runtime_fields: [
-          {
-            type: 'keyword',
-            name: 'foobar',
-            script: 'emit(UUID.randomUUID().toString())',
-            format: {
-              type: 'url',
-              params: {
-                parsedUrl: {
-                  origin: 'http://localhost:5601',
-                  pathname: '/app/dashboards',
-                  basePath: '',
-                },
-                type: 'a',
-                urlTemplate: 'http://google.com?q={{value}}',
-                labelTemplate: 'google search for {{value}}',
-                width: null,
-                height: null,
-              },
-            },
-            custom_label: 'my custom label',
-            custom_description: 'my custom description',
-          },
-        ],
-      };
-      const result = fromStoredDataset(index);
-      expect(result).toEqual(expected);
-    });
-  });
-
-  describe('toStoredDataset', () => {
-    it('converts dataView dataset to string id', () => {
-      const dataset: DiscoverSessionDataViewReference = {
-        type: 'dataView',
-        id: 'my-data-view-id',
-      };
-      const result = toStoredDataset(dataset);
-      expect(result).toBe('my-data-view-id');
-    });
-
-    it('converts index-pattern dataset to serialized index spec', () => {
-      const dataset: DiscoverSessionDataViewSpec = {
-        type: 'index',
-        index: 'my-index-*',
-        time_field: '@timestamp',
-        runtime_fields: [
-          {
-            name: 'rt',
-            type: 'keyword',
-            script: 'emit(doc["id"].value)',
-            format: { type: 'string' },
-          },
-        ],
-      };
-      const result = toStoredDataset(dataset);
-      expect(result).toEqual({
-        title: 'my-index-*',
-        timeFieldName: '@timestamp',
-        fieldFormats: {
-          rt: { id: 'string', params: undefined },
-        },
-        fieldAttrs: {
-          rt: {},
-        },
-        runtimeFieldMap: {
-          rt: {
-            type: 'keyword',
-            script: { source: 'emit(doc["id"].value)' },
-          },
-        },
-      });
-    });
-
-    it('converts index-pattern dataset without runtime fields', () => {
-      const dataset: DiscoverSessionDataViewSpec = {
-        type: 'index',
-        index: 'logs-*',
-        time_field: '@timestamp',
-      };
-      const result = toStoredDataset(dataset);
-      expect(result).toEqual({
-        title: 'logs-*',
-        timeFieldName: '@timestamp',
-      });
-    });
-  });
-
   describe('fromStoredTab', () => {
     it('converts stored tab with dataView id to API tab', () => {
       const storedTab = {
@@ -1147,8 +993,8 @@ describe('search embeddable transform utils', () => {
       expect(result.row_height).toBe('auto');
       expect(result.header_row_height).toBe('auto');
       expect(result.density).toBe(DataGridDensity.COMPACT);
-      expect('dataset' in result && result.dataset).toEqual({
-        type: 'dataView',
+      expect('data_source' in result && result.data_source).toEqual({
+        type: AS_CODE_DATA_VIEW_REFERENCE_TYPE,
         id: 'data-view-1',
       });
       expect('view_mode' in result && result.view_mode).toBe(VIEW_MODE.DOCUMENT_LEVEL);
@@ -1169,7 +1015,7 @@ describe('search embeddable transform utils', () => {
         filters: [],
         rows_per_page: 100,
         sample_size: 500,
-        dataset: { type: 'dataView', id: 'data-view-1' },
+        data_source: { type: AS_CODE_DATA_VIEW_REFERENCE_TYPE, id: 'data-view-1' },
       };
       const { state, references } = toStoredTab(apiTab);
       expect(references).toContainEqual({
@@ -1191,7 +1037,7 @@ describe('search embeddable transform utils', () => {
       expect(searchSource.filter).toEqual([]);
     });
 
-    it('converts API tab with index-pattern dataset (no refs) when inline', () => {
+    it('converts API tab with index-pattern data_source (no refs) when inline', () => {
       const apiTab: DiscoverSessionEmbeddableByValueState['tabs'][0] = {
         column_order: ['foo'],
         sort: [],
@@ -1201,9 +1047,9 @@ describe('search embeddable transform utils', () => {
         row_height: 3,
         query: { language: 'kuery', query: '' },
         filters: [],
-        dataset: {
-          type: 'index',
-          index: 'my-*',
+        data_source: {
+          type: AS_CODE_DATA_VIEW_SPEC_TYPE,
+          index_pattern: 'my-*',
           time_field: '@timestamp',
         },
       };

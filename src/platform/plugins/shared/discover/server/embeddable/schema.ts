@@ -17,7 +17,7 @@ import {
 } from '@kbn/presentation-publishing-schemas';
 import { VIEW_MODE } from '@kbn/saved-search-plugin/common';
 import { asCodeFilterSchema } from '@kbn/as-code-filters-schema';
-import { runtimeFieldSchema } from '@kbn/as-code-data-views-schema';
+import { dataViewSchema } from '@kbn/as-code-data-views-schema';
 import type { GetDrilldownsSchemaFnType } from '@kbn/embeddable-plugin/server';
 import { ON_OPEN_PANEL_MENU } from '@kbn/ui-actions-plugin/common/trigger_ids';
 
@@ -45,63 +45,6 @@ const sortSchema = schema.object({
     },
   }),
 });
-
-/**
- * TODO: These are duplicated from the Lens embeddable schema. We should move these to a shared location.
- * @see datasetTypeSchema
- */
-export const dataViewReferenceSchema = schema.object(
-  {
-    type: schema.literal('dataView'),
-    /**
-     * The name of the Kibana data view to use as the data source.
-     * Example: 'my-data-view'
-     */
-    id: schema.string({
-      meta: {
-        description:
-          'The id of the Kibana data view to use as the data source. Example: "my-data-view".',
-      },
-    }),
-  },
-  { meta: { id: 'dataViewDatasetTypeSchema' } }
-);
-
-export const dataViewSpecSchema = schema.object(
-  {
-    type: schema.literal('index'),
-    /**
-     * The name of the Elasticsearch index to use as the data source.
-     * Example: 'my-index-*'
-     */
-    index: schema.string({
-      meta: {
-        description:
-          'The name of the Elasticsearch index to use as the data source. Example: "my-index-*".',
-      },
-    }),
-    /**
-     * The name of the time field in the index. Used for time-based filtering.
-     * Example: '@timestamp'
-     */
-    time_field: schema.maybe(
-      schema.string({
-        meta: {
-          description:
-            'The name of the time field in the index. Used for time-based filtering. Example: "@timestamp".',
-        },
-      })
-    ),
-    /**
-     * Optional array of runtime fields to define on the index. Each runtime field describes a computed field available at query time.
-     * If not provided, no runtime fields are used.
-     */
-    runtime_fields: schema.maybe(schema.arrayOf(runtimeFieldSchema, { maxSize: 100 })),
-  },
-  { meta: { id: 'indexDatasetTypeSchema' } }
-);
-
-export const dataViewSchema = schema.oneOf([dataViewReferenceSchema, dataViewSpecSchema]);
 
 export const viewModeSchema = schema.oneOf(
   [
@@ -374,7 +317,7 @@ const classicTabSchema = schema.allOf([
         description: 'List of filters to apply to the data in the tab.',
       },
     }),
-    dataset: dataViewSchema,
+    data_source: dataViewSchema,
     view_mode: viewModeSchema,
   }),
 ]);
@@ -445,9 +388,6 @@ export const getDiscoverSessionEmbeddableSchema = (
     getDiscoverSessionByReferenceEmbeddableSchema(getDrilldownsSchema),
   ]);
 
-export type DiscoverSessionDataViewReference = TypeOf<typeof dataViewReferenceSchema>;
-export type DiscoverSessionDataViewSpec = TypeOf<typeof dataViewSpecSchema>;
-export type DiscoverSessionDataset = TypeOf<typeof dataViewSchema>;
 export type DiscoverSessionPanelOverrides = TypeOf<typeof panelOverridesSchema>;
 export type DiscoverSessionClassicTab = TypeOf<typeof classicTabSchema>;
 export type DiscoverSessionEsqlTab = TypeOf<typeof esqlTabSchema>;

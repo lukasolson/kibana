@@ -7,6 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
+import { AS_CODE_DATA_VIEW_SPEC_TYPE } from '@kbn/as-code-data-views-schema';
 import type { DiscoverSessionEmbeddableState } from '../../server';
 import { getSearchEmbeddableFactory } from './get_search_embeddable_factory';
 import { LEGACY_LOG_STREAM_EMBEDDABLE } from './constants';
@@ -22,9 +23,9 @@ export const getLegacyLogStreamEmbeddableFactory = (
         ...logsInitialState,
         tabs: [
           {
-            dataset: {
-              type: 'index',
-              index: discoverServices.logsDataAccess
+            data_source: {
+              type: AS_CODE_DATA_VIEW_SPEC_TYPE,
+              index_pattern: discoverServices.logsDataAccess
                 ? await discoverServices.logsDataAccess.services.logSourcesService.getFlattenedLogSources()
                 : 'logs-*-*',
               time_field: '@timestamp',

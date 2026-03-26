@@ -7,6 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
+import { AS_CODE_DATA_VIEW_REFERENCE_TYPE } from '@kbn/as-code-data-views-schema';
 import type { DrilldownTransforms } from '@kbn/embeddable-plugin/common';
 import { getSearchEmbeddableTransforms } from './search_embeddable_transforms';
 import type {
@@ -129,13 +130,13 @@ describe('searchEmbeddableTransforms', () => {
         sort,
         view_mode: viewMode,
         density,
-        dataset,
+        data_source: dataSource,
       } = result.tabs[0] as DiscoverSessionClassicTab;
       expect(sort).toEqual([{ name: '@timestamp', direction: 'desc' }]);
       expect(viewMode).toBe(VIEW_MODE.DOCUMENT_LEVEL);
       expect(density).toBe(DataGridDensity.COMPACT);
-      expect(dataset).toEqual({
-        type: 'dataView',
+      expect(dataSource).toEqual({
+        type: AS_CODE_DATA_VIEW_REFERENCE_TYPE,
         id: 'data-view-1',
       });
       expect(mockDrilldownTransforms.transformOut).toHaveBeenCalledWith(state, references);
@@ -240,7 +241,7 @@ describe('searchEmbeddableTransforms', () => {
               filters: [],
               rows_per_page: 100,
               sample_size: 1000,
-              dataset: { type: 'dataView', id: 'data-view-1' },
+              data_source: { type: AS_CODE_DATA_VIEW_REFERENCE_TYPE, id: 'data-view-1' },
             },
           ],
         };
@@ -278,7 +279,7 @@ describe('searchEmbeddableTransforms', () => {
               row_height: 3,
               query: { language: 'kuery', query: '' },
               filters: [],
-              dataset: { type: 'dataView', id: 'data-view-id-123' },
+              data_source: { type: AS_CODE_DATA_VIEW_REFERENCE_TYPE, id: 'data-view-id-123' },
             },
           ],
         };

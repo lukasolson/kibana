@@ -41,9 +41,6 @@ export interface DiscoverServerPluginStart {
 
 export { config } from './config';
 export type {
-  DiscoverSessionDataViewReference,
-  DiscoverSessionDataViewSpec,
-  DiscoverSessionDataset,
   DiscoverSessionClassicTab,
   DiscoverSessionEsqlTab,
   DiscoverSessionTab,
