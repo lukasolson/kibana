@@ -12,6 +12,8 @@ import { schema } from '@kbn/config-schema';
 import { DataGridDensity } from '@kbn/discover-utils';
 import { aggregateQuerySchema, querySchema } from '@kbn/es-query-server';
 import {
+  BY_REF_SCHEMA_META,
+  BY_VALUE_SCHEMA_META,
   serializedTitlesSchema,
   serializedTimeRangeSchema,
 } from '@kbn/presentation-publishing-schemas';
@@ -342,14 +344,20 @@ const DISCOVER_SUPPORTED_DRILLDOWN_TRIGGERS = [ON_OPEN_PANEL_MENU];
  * Intersects embeddable-only props with panel-level schemas normally merged by the host
  * (e.g. dashboard): serialized titles, time range, and drilldowns.
  */
-function withPanelSchemas<P extends Props>(embeddableSchema: ObjectType<P>) {
+function withPanelSchemas<P extends Props>(
+  embeddableSchema: ObjectType<P>,
+  allOfOptions?: { meta: typeof BY_VALUE_SCHEMA_META | typeof BY_REF_SCHEMA_META }
+) {
   return (getDrilldownsSchema: GetDrilldownsSchemaFnType) =>
-    schema.allOf([
-      serializedTitlesSchema,
-      serializedTimeRangeSchema,
-      getDrilldownsSchema(DISCOVER_SUPPORTED_DRILLDOWN_TRIGGERS),
-      embeddableSchema,
-    ]);
+    schema.allOf(
+      [
+        serializedTitlesSchema,
+        serializedTimeRangeSchema,
+        getDrilldownsSchema(DISCOVER_SUPPORTED_DRILLDOWN_TRIGGERS),
+        embeddableSchema,
+      ],
+      allOfOptions ?? {}
+    );
 }
 
 const getDiscoverSessionByValueEmbeddableSchema = withPanelSchemas(
@@ -362,7 +370,8 @@ const getDiscoverSessionByValueEmbeddableSchema = withPanelSchemas(
           'Inline tab configuration. Used when no `discover_session_id` is set. Panel-level fields (e.g. `column_order`, `sort`) override these when provided. Currently supports one tab.',
       },
     }),
-  })
+  }),
+  { meta: BY_VALUE_SCHEMA_META }
 );
 
 const getDiscoverSessionByReferenceEmbeddableSchema = withPanelSchemas(
@@ -377,7 +386,8 @@ const getDiscoverSessionByReferenceEmbeddableSchema = withPanelSchemas(
       })
     ),
     overrides: panelOverridesSchema,
-  })
+  }),
+  { meta: BY_REF_SCHEMA_META }
 );
 
 export const getDiscoverSessionEmbeddableSchema = (
