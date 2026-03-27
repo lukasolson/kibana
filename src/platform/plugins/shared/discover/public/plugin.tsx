@@ -29,6 +29,7 @@ import { DISCOVER_ESQL_LOCATOR } from '@kbn/deeplinks-analytics';
 import { ADD_PANEL_TRIGGER, ON_OPEN_PANEL_MENU } from '@kbn/ui-actions-plugin/common/trigger_ids';
 import type { DrilldownTransforms } from '@kbn/embeddable-plugin/common';
 import { ProjectRoutingAccess } from '@kbn/cps-utils';
+import { registerUnifiedChartSectionViewerEbtEvents } from '@kbn/unified-chart-section-viewer/src/analytics';
 import {
   DISCOVER_APP_LOCATOR,
   EMBEDDABLE_TRANSFORMS_FEATURE_FLAG_KEY,
@@ -175,6 +176,7 @@ export class DiscoverPlugin
     });
 
     registerDiscoverEBTManagerAnalytics(core, this.discoverEbtContext$);
+    registerUnifiedChartSectionViewerEbtEvents(core.analytics);
 
     core.application.register({
       id: PLUGIN_ID,
