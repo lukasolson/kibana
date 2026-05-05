@@ -24,7 +24,7 @@ export const fieldSettingsSchema = schema.oneOf(
       id: 'kbn-field-settings-entry',
       title: 'Field settings or runtime field',
       description:
-        'Display overrides for an indexed field, or a runtime field definition when `type` is set to a runtime field kind.',
+        'Display settings for a mapped index field, or a full runtime field definition when `type` is set to a runtime field kind.',
     },
   }
 );
@@ -33,7 +33,14 @@ export const dataViewReferenceSchema = asCodeRefIdSchema.extends(
   {
     type: schema.literal(AS_CODE_DATA_VIEW_REFERENCE_TYPE),
   },
-  { meta: { id: 'kbn-data-view-reference-schema', title: 'Data view reference' } }
+  {
+    meta: {
+      id: 'kbn-data-view-reference-schema',
+      title: 'Data view reference',
+      description:
+        'Reuses an existing Kibana data view as the data source. Set `ref_id` to the library item identifier of the data view. Choose `data_view_spec` instead if you want to define the index pattern, time field, and field settings inline.',
+    },
+  }
 );
 
 export const dataViewSpecSchema = schema.object(
@@ -45,7 +52,14 @@ export const dataViewSpecSchema = schema.object(
       schema.recordOf(fieldSettingsFieldNameSchema, fieldSettingsSchema)
     ),
   },
-  { meta: { id: 'kbn-data-view-spec-schema', title: 'Data view inline spec' } }
+  {
+    meta: {
+      id: 'kbn-data-view-spec-schema',
+      title: 'Data view inline spec',
+      description:
+        'Defines the data source inline with an index pattern (and optional time field and field settings). Choose `data_view_reference` instead to point at an existing Kibana data view by id.',
+    },
+  }
 );
 
 export const dataViewSchema = schema.discriminatedUnion('type', [

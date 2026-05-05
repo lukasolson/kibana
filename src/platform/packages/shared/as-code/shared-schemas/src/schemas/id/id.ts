@@ -12,6 +12,7 @@ import { isValidId } from './is_valid_id';
 
 export const asCodeIdSchema = schema.string({
   meta: {
+    title: 'Library item identifier',
     description:
       'A unique identifier. Must contain only lowercase letters, numbers, hyphens, and underscores.',
   },
